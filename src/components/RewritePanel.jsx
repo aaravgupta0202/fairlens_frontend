@@ -1,10 +1,8 @@
 import { useState } from 'react'
+import HighlightedText from './HighlightedText'
 import styles from './RewritePanel.module.css'
 
-/**
- * Side-by-side comparison: original biased response vs Gemini's unbiased rewrite.
- */
-export default function RewritePanel({ original, unbiased }) {
+export default function RewritePanel({ original, unbiased, flaggedPhrases }) {
   const [copied, setCopied] = useState(false)
 
   function copyUnbiased() {
@@ -16,20 +14,25 @@ export default function RewritePanel({ original, unbiased }) {
 
   return (
     <div className={styles.wrapper}>
-      {/* Original */}
+      {/* Original with inline highlights */}
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <span className={styles.badge} style={{ background: 'rgba(248,113,113,0.15)', color: 'var(--red)' }}>
             ✗ Original Response
           </span>
+          {flaggedPhrases?.length > 0 && (
+            <span className={styles.flagCount}>
+              {flaggedPhrases.length} phrase{flaggedPhrases.length > 1 ? 's' : ''} flagged
+            </span>
+          )}
         </div>
-        <p className={styles.text}>{original}</p>
+        <HighlightedText text={original} flaggedPhrases={flaggedPhrases} />
       </div>
 
       {/* Arrow */}
       <div className={styles.arrow}>→</div>
 
-      {/* Unbiased */}
+      {/* Unbiased rewrite */}
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <span className={styles.badge} style={{ background: 'rgba(52,211,153,0.15)', color: 'var(--green)' }}>

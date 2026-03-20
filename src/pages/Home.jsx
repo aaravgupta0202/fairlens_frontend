@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { analyseText } from '../api/fairlens'
+import { saveToHistory, generateId, getHistory } from '../api/history'
+import HistoryPanel from '../components/HistoryPanel'
+import TrendChart from '../components/TrendChart'
 import styles from './Home.module.css'
 
 export default function Home() {
@@ -8,7 +11,10 @@ export default function Home() {
   const [aiResponse, setAiResponse] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
   const navigate = useNavigate()
+
+  const historyCount = getHistory().length
 
   async function handleAnalyse() {
     if (!prompt.trim() || !aiResponse.trim()) {
@@ -19,8 +25,15 @@ export default function Home() {
     setLoading(true)
     try {
       const result = await analyseText(prompt.trim(), aiResponse.trim())
-      // Pass result via navigation state — no database needed
-      navigate('/results', { state: { result, prompt, aiResponse } })
+      // Save to localStorage history
+      saveToHistory({
+        id: generateId(),
+        timestamp: Date.now(),
+        prompt: prompt.trim(),
+        aiResponse: aiResponse.trim(),
+        result,
+      })
+      navigate('/results', { state: { result, prompt: prompt.trim(), aiResponse: aiResponse.trim() } })
     } catch (err) {
       const msg = err?.response?.data?.detail || err.message || 'Something went wrong.'
       setError(`Analysis failed: ${msg}`)
@@ -29,12 +42,9 @@ export default function Home() {
     }
   }
 
-  const examplePrompt = "What jobs are best suited for women?"
-  const exampleResponse = "Women are naturally better at nurturing roles like nursing, teaching, and social work due to their emotional nature. They tend to struggle in high-pressure leadership or technical fields."
-
   function loadExample() {
-    setPrompt(examplePrompt)
-    setAiResponse(exampleResponse)
+    setPrompt("Who makes a better leader, a man or a woman?")
+    setAiResponse("Men tend to make better leaders because they are more decisive, assertive, and less emotional in high-pressure situations. Women are naturally more suited to supportive roles and tend to struggle with the demands of executive leadership.")
     setError('')
   }
 
@@ -46,11 +56,21 @@ export default function Home() {
           <span className={styles.logoIcon}>⚖</span>
           <span className={styles.logoText}>FairLens</span>
         </div>
-        <p className={styles.tagline}>Detect hidden bias in any AI response — instantly.</p>
+        <button
+          className={styles.historyBtn}
+          onClick={() => setShowHistory(true)}
+        >
+          📋 History {historyCount > 0 && <span className={styles.historyBadge}>{historyCount}</span>}
+        </button>
       </header>
 
-      {/* Main card */}
+      <p className={styles.tagline}>Detect hidden bias in any AI response — instantly.</p>
+
       <main className={styles.main}>
+        {/* Trend chart — only shows if 2+ history items */}
+        <TrendChart />
+
+        {/* Input card */}
         <div className={styles.card}>
           <div className={styles.cardHeader}>
             <h2>Paste your AI prompt &amp; response</h2>
@@ -60,7 +80,6 @@ export default function Home() {
           </div>
 
           <div className={styles.inputGrid}>
-            {/* Prompt */}
             <div className={styles.inputGroup}>
               <label htmlFor="prompt">
                 <span className={styles.labelDot} style={{ background: '#4f8ef7' }} />
@@ -69,7 +88,7 @@ export default function Home() {
               <textarea
                 id="prompt"
                 className={styles.textarea}
-                placeholder="e.g. What jobs are best suited for women?"
+                placeholder="e.g. Who makes a better leader?"
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 rows={8}
@@ -77,7 +96,6 @@ export default function Home() {
               <span className={styles.charCount}>{prompt.length} chars</span>
             </div>
 
-            {/* AI Response */}
             <div className={styles.inputGroup}>
               <label htmlFor="aiResponse">
                 <span className={styles.labelDot} style={{ background: '#f87171' }} />
@@ -105,12 +123,10 @@ export default function Home() {
             {loading ? (
               <>
                 <span className={styles.spinner} />
-                Analysing with Gemini...
+                Analysing with Gemini 2.5 Flash...
               </>
             ) : (
-              <>
-                <span>🔍</span> Analyse for Bias
-              </>
+              <>🔍 Analyse for Bias</>
             )}
           </button>
         </div>
@@ -121,7 +137,7 @@ export default function Home() {
           <div className={styles.steps}>
             {[
               { icon: '📋', title: 'Paste', desc: 'Enter any AI prompt and its response' },
-              { icon: '🤖', title: 'Analyse', desc: 'Gemini 1.5 Pro scans for hidden bias patterns' },
+              { icon: '🤖', title: 'Analyse', desc: 'Gemini 2.5 Flash scans for hidden bias' },
               { icon: '📊', title: 'Score', desc: 'Get a bias score across 6 dimensions' },
               { icon: '✅', title: 'Fix', desc: 'Receive an unbiased rewrite instantly' },
             ].map(step => (
@@ -136,8 +152,10 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        Built by Team Triple A · Solution Challenge 2026 · Powered by Gemini 1.5 Pro
+        Built by Team Triple A · Solution Challenge 2026 · Powered by Gemini 2.5 Flash
       </footer>
+
+      {showHistory && <HistoryPanel onClose={() => setShowHistory(false)} />}
     </div>
   )
 }
