@@ -5,31 +5,20 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-/**
- * Reads a File object and returns its base64-encoded content.
- */
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => {
-      // result is "data:text/csv;base64,XXXX" — send full string, backend strips prefix
-      resolve(reader.result)
-    }
+    reader.onload = () => resolve(reader.result)
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
 }
 
-/**
- * Parses CSV headers from a File without uploading.
- * Used to populate the column selector dropdowns.
- */
 export function parseCsvHeaders(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
-      const text = e.target.result
-      const firstLine = text.split('\n')[0]
+      const firstLine = e.target.result.split('\n')[0]
       const headers = firstLine.split(',').map(h => h.trim().replace(/^"|"$/g, ''))
       resolve(headers)
     }
@@ -38,15 +27,29 @@ export function parseCsvHeaders(file) {
   })
 }
 
-/**
- * POST /audit-dataset
- */
-export async function auditDataset(file, targetColumn, sensitiveColumn) {
+export async function auditDataset({
+  file, targetColumn, sensitiveColumn,
+  sensitiveColumn2 = null, modelType = 'logistic_regression'
+}) {
   const base64 = await fileToBase64(file)
   const { data } = await api.post('/audit-dataset', {
     dataset: base64,
     target_column: targetColumn,
     sensitive_column: sensitiveColumn,
+    sensitive_column_2: sensitiveColumn2 || null,
+    model_type: modelType,
   })
   return data
+}
+
+export function downloadBase64File(b64string, filename, mimeType) {
+  const byteChars = atob(b64string)
+  const byteNums = Array.from(byteChars, c => c.charCodeAt(0))
+  const blob = new Blob([new Uint8Array(byteNums)], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }

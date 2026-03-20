@@ -1,12 +1,11 @@
+import { useState } from 'react'
 import BiasGauge from './BiasGauge'
 import FairnessComparisonChart from './FairnessComparisonChart'
+import { downloadBase64File } from '../api/audit'
+import { buildShareUrl } from '../api/share'
 import styles from './AuditResults.module.css'
 
-/**
- * Full audit results dashboard.
- * Shows before/after accuracy, fairness scores, group breakdown, and chart.
- */
-export default function AuditResults({ result, onReset }) {
+export default function AuditResults({ result, targetColumn, sensitiveColumn, onReset }) {
   const {
     accuracy_before, accuracy_after,
     fairness_before, fairness_after,
@@ -15,43 +14,71 @@ export default function AuditResults({ result, onReset }) {
     bias_detected, bias_level,
     group_metrics_before, group_metrics_after,
     message, total_rows, feature_columns,
+    debiased_dataset, debiased_model, intersectional,
   } = result
 
+  const [shareState, setShareState] = useState('idle')
   const fairnessLevel = fairness_after >= 85 ? 'Low' : fairness_after >= 65 ? 'Moderate' : 'High'
   const fairnessLevelBefore = fairness_before >= 85 ? 'Low' : fairness_before >= 65 ? 'Moderate' : 'High'
-
   const accuracyDiff = (accuracy_after - accuracy_before).toFixed(1)
   const fairnessDiff = (fairness_after - fairness_before).toFixed(1)
 
-  function metricColor(val, higherBetter = true) {
-    const positive = higherBetter ? val > 0 : val < 0
-    return positive ? 'var(--green)' : val === 0 ? 'var(--text-muted)' : 'var(--amber)'
+  function metricColor(val) {
+    return val > 0 ? 'var(--green)' : val === 0 ? 'var(--text-muted)' : 'var(--amber)'
   }
+
+  function handleDownloadDataset() {
+    downloadBase64File(debiased_dataset, 'fairlens_debiased_dataset.csv', 'text/csv')
+  }
+
+  function handleDownloadModel() {
+    downloadBase64File(debiased_model, 'fairlens_debiased_model.pkl', 'application/octet-stream')
+  }
+
+  async function handleShare() {
+    const url = buildShareUrl({ type: 'audit', result, targetColumn, sensitiveColumn })
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      setShareState('copied')
+      setTimeout(() => setShareState('idle'), 2500)
+    } catch { setShareState('error') }
+  }
+
+  const shareLabel = { idle: '🔗 Share', copied: '✓ Copied!', error: 'Failed' }[shareState]
 
   return (
     <div className={styles.wrapper}>
       {/* Header */}
       <div className={styles.header}>
         <div>
-          <h3 className={styles.title}>Dataset Audit Results</h3>
-          <p className={styles.subtitle}>{total_rows} rows · {feature_columns.length} features analysed</p>
+          <h3 className={styles.title}>
+            Dataset Audit Results
+            {intersectional && <span className={styles.intersectionalBadge}>Intersectional</span>}
+          </h3>
+          <p className={styles.subtitle}>
+            {total_rows} rows · {feature_columns.length} features analysed
+          </p>
         </div>
-        <button className={styles.resetBtn} onClick={onReset}>← New Audit</button>
+        <div className={styles.headerActions}>
+          <button className={`${styles.actionBtn} ${shareState === 'copied' ? styles.actionSuccess : ''}`}
+            onClick={handleShare}>{shareLabel}</button>
+          <button className={styles.actionBtn} onClick={handleDownloadDataset}
+            disabled={!debiased_dataset}>⬇ Debiased Dataset</button>
+          <button className={styles.actionBtn} onClick={handleDownloadModel}
+            disabled={!debiased_model}>⬇ Debiased Model</button>
+          <button className={styles.resetBtn} onClick={onReset}>← New Audit</button>
+        </div>
       </div>
 
-      {/* Bias detected banner */}
-      {bias_detected && (
-        <div className={`${styles.banner} ${styles[`banner${bias_level}`]}`}>
-          ⚠ {bias_level} bias detected before mitigation. Mitigation has been applied — see comparison below.
-        </div>
-      )}
-      {!bias_detected && (
-        <div className={`${styles.banner} ${styles.bannerLow}`}>
-          ✓ Low bias detected. The model appears fair with respect to the selected sensitive attribute.
-        </div>
-      )}
+      {/* Bias banner */}
+      <div className={`${styles.banner} ${styles[`banner${bias_level}`]}`}>
+        {bias_detected
+          ? `⚠ ${bias_level} bias detected before mitigation. Mitigation has been applied — see comparison below.`
+          : '✓ Low bias detected. The model appears fair with respect to the selected sensitive attribute.'}
+      </div>
 
-      {/* Gauges row */}
+      {/* Gauges */}
       <div className={styles.gaugesRow}>
         <div className={styles.card}>
           <p className={styles.cardLabel}>Fairness Score — Before</p>
@@ -66,85 +93,58 @@ export default function AuditResults({ result, onReset }) {
         </div>
       </div>
 
-      {/* Metrics comparison */}
+      {/* Metrics grid */}
       <div className={styles.metricsGrid}>
-        <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Model Accuracy</p>
-          <div className={styles.metricRow}>
-            <span className={styles.metricVal}>{accuracy_before}%</span>
-            <span className={styles.metricArrow}>→</span>
-            <span className={styles.metricVal}>{accuracy_after}%</span>
-            <span className={styles.metricDiff} style={{ color: metricColor(parseFloat(accuracyDiff)) }}>
-              {accuracyDiff > 0 ? '+' : ''}{accuracyDiff}%
-            </span>
+        {[
+          { label: 'Model Accuracy', before: `${accuracy_before}%`, after: `${accuracy_after}%`,
+            diff: `${accuracyDiff > 0 ? '+' : ''}${accuracyDiff}%`, diffVal: parseFloat(accuracyDiff) },
+          { label: 'Fairness Score', before: `${fairness_before}%`, after: `${fairness_after}%`,
+            diff: `${fairnessDiff > 0 ? '+' : ''}${fairnessDiff}%`, diffVal: parseFloat(fairnessDiff) },
+          { label: 'Dem. Parity Diff.', before: dp_difference_before, after: dp_difference_after,
+            diff: dp_difference_after < dp_difference_before ? '↓ Better' : '↑ Worse',
+            diffVal: dp_difference_before - dp_difference_after },
+          { label: 'Equal. Odds Diff.', before: eo_difference_before, after: eo_difference_after,
+            diff: eo_difference_after < eo_difference_before ? '↓ Better' : '↑ Worse',
+            diffVal: eo_difference_before - eo_difference_after },
+        ].map(m => (
+          <div key={m.label} className={styles.metricCard}>
+            <p className={styles.metricLabel}>{m.label}</p>
+            <div className={styles.metricRow}>
+              <span className={styles.metricVal}>{m.before}</span>
+              <span className={styles.metricArrow}>→</span>
+              <span className={styles.metricVal}>{m.after}</span>
+              <span className={styles.metricDiff} style={{ color: metricColor(m.diffVal) }}>
+                {m.diff}
+              </span>
+            </div>
           </div>
-        </div>
-
-        <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Fairness Score</p>
-          <div className={styles.metricRow}>
-            <span className={styles.metricVal}>{fairness_before}%</span>
-            <span className={styles.metricArrow}>→</span>
-            <span className={styles.metricVal}>{fairness_after}%</span>
-            <span className={styles.metricDiff} style={{ color: metricColor(parseFloat(fairnessDiff)) }}>
-              {fairnessDiff > 0 ? '+' : ''}{fairnessDiff}%
-            </span>
-          </div>
-        </div>
-
-        <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Dem. Parity Diff.</p>
-          <div className={styles.metricRow}>
-            <span className={styles.metricVal}>{dp_difference_before}</span>
-            <span className={styles.metricArrow}>→</span>
-            <span className={styles.metricVal}>{dp_difference_after}</span>
-            <span className={styles.metricDiff} style={{ color: metricColor(dp_difference_before - dp_difference_after) }}>
-              {dp_difference_after < dp_difference_before ? '↓ Better' : '↑ Worse'}
-            </span>
-          </div>
-        </div>
-
-        <div className={styles.metricCard}>
-          <p className={styles.metricLabel}>Equal. Odds Diff.</p>
-          <div className={styles.metricRow}>
-            <span className={styles.metricVal}>{eo_difference_before}</span>
-            <span className={styles.metricArrow}>→</span>
-            <span className={styles.metricVal}>{eo_difference_after}</span>
-            <span className={styles.metricDiff} style={{ color: metricColor(eo_difference_before - eo_difference_after) }}>
-              {eo_difference_after < eo_difference_before ? '↓ Better' : '↑ Worse'}
-            </span>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Group comparison chart */}
-      <div className={styles.card}>
+      {/* Chart */}
+      <div className={styles.card} style={{ alignItems: 'stretch' }}>
         <FairnessComparisonChart
           groupMetricsBefore={group_metrics_before}
           groupMetricsAfter={group_metrics_after}
         />
       </div>
 
-      {/* Group breakdown table */}
-      <div className={styles.card}>
+      {/* Per-group table */}
+      <div className={styles.card} style={{ alignItems: 'stretch' }}>
         <h4 className={styles.tableTitle}>Per-Group Metrics (After Mitigation)</h4>
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Group</th>
-                <th>Sample Size</th>
-                <th>Accuracy</th>
-                <th>Positive Rate</th>
+                <th>Group</th><th>Sample Size</th>
+                <th>Accuracy</th><th>Positive Rate</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(group_metrics_after).map(([group, metrics]) => (
+              {Object.entries(group_metrics_after).map(([group, m]) => (
                 <tr key={group}>
-                  <td>{group}</td>
-                  <td>{metrics.sample_size}</td>
-                  <td>{metrics.accuracy}%</td>
-                  <td>{metrics.positive_prediction_rate}%</td>
+                  <td>{group}</td><td>{m.sample_size}</td>
+                  <td>{m.accuracy}%</td><td>{m.positive_prediction_rate}%</td>
                 </tr>
               ))}
             </tbody>
@@ -152,10 +152,13 @@ export default function AuditResults({ result, onReset }) {
         </div>
       </div>
 
-      {/* Summary message */}
+      {/* Gemini message */}
       <div className={styles.messageCard}>
-        <span className={styles.messageIcon}>📋</span>
-        <p className={styles.messageText}>{message}</p>
+        <span className={styles.messageIcon}>🤖</span>
+        <div>
+          <p className={styles.messageLabel}>Gemini 2.5 Flash Analysis</p>
+          <p className={styles.messageText}>{message}</p>
+        </div>
       </div>
     </div>
   )

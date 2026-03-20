@@ -6,7 +6,6 @@
   padding: 0 1rem 3rem;
 }
 
-/* ── Header ── */
 .header {
   width: 100%;
   max-width: 1000px;
@@ -18,11 +17,7 @@
   flex-wrap: wrap;
 }
 
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+.headerLeft { display: flex; align-items: center; gap: 1rem; }
 
 .logo {
   font-size: 1.2rem;
@@ -42,18 +37,9 @@
   font-size: 0.88rem;
   transition: all 0.2s;
 }
+.backBtn:hover { border-color: var(--accent); color: var(--accent); }
 
-.backBtn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.headerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
+.headerActions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .actionBtn {
   background: var(--surface);
@@ -65,23 +51,10 @@
   transition: all 0.2s;
   white-space: nowrap;
 }
+.actionBtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.actionBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.actionSuccess { border-color: var(--green) !important; color: var(--green) !important; }
 
-.actionBtn:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.actionBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.actionSuccess {
-  border-color: var(--green) !important;
-  color: var(--green) !important;
-}
-
-/* ── Main ── */
 .main {
   width: 100%;
   max-width: 1000px;
@@ -90,7 +63,17 @@
   gap: 1.25rem;
 }
 
-/* ── Card ── */
+/* Banner — same as audit */
+.banner {
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+}
+.bannerHigh { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--red); }
+.bannerModerate { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: var(--amber); }
+.bannerLow { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: var(--green); }
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -102,52 +85,27 @@
 }
 
 .cardTitle {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
 }
 
-/* ── Top Row ── */
 .topRow {
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 1.25rem;
   align-items: start;
 }
+@media (max-width: 640px) { .topRow { grid-template-columns: 1fr; } }
 
-@media (max-width: 640px) {
-  .topRow { grid-template-columns: 1fr; }
-}
+.gaugeWrapper { display: flex; justify-content: center; padding: 0.5rem 0; }
+.gaugeHint { font-size: 0.83rem; color: var(--text-muted); line-height: 1.5; text-align: center; }
+.chartCard { justify-content: flex-start; }
 
-.gaugeWrapper {
-  display: flex;
-  justify-content: center;
-  padding: 0.5rem 0;
-}
+.trendHint { font-size: 0.83rem; color: var(--text-muted); text-align: center; opacity: 0.7; }
 
-.gaugeHint {
-  font-size: 0.83rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  text-align: center;
-}
-
-.chartCard {
-  justify-content: flex-start;
-}
-
-/* ── Trend hint ── */
-.trendHint {
-  font-size: 0.83rem;
-  color: var(--text-muted);
-  text-align: center;
-  padding: 0.5rem 0;
-  opacity: 0.7;
-}
-
-/* ── Prompt ── */
 .promptText {
   font-size: 0.95rem;
   color: var(--text-muted);
@@ -158,7 +116,6 @@
   font-style: italic;
 }
 
-/* ── Footer ── */
 .footer {
   margin-top: 3rem;
   color: var(--text-muted);
