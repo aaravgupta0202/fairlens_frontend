@@ -244,30 +244,30 @@ export default function Home() {
         )}
 
         {/* How it works */}
-        {!auditResult && (
-          <div className={styles.howItWorks}>
-            <h3>How FairLens works</h3>
-            <div className={styles.steps}>
-              {mode === 'text' ? [
-                { icon: '📋', title: 'Paste', desc: 'Enter any AI prompt and its response' },
-                { icon: '🤖', title: 'Analyse', desc: 'Gemini 2.5 Flash scans for hidden bias' },
-                { icon: '📊', title: 'Score', desc: 'Get a bias score across 6 dimensions' },
-                { icon: '✅', title: 'Fix', desc: 'Receive an unbiased rewrite instantly' },
-              ] : [
-                { icon: '📁', title: 'Upload', desc: 'Upload any CSV dataset' },
-                { icon: '⚙', title: 'Configure', desc: 'Select target and sensitive columns' },
-                { icon: '🧪', title: 'Train', desc: 'Model is trained and fairness measured' },
-                { icon: '⚖', title: 'Mitigate', desc: 'Bias mitigation applied and compared' },
-              ].map(s => (
-                <div key={s.title} className={styles.stepCard}>
-                  <div className={styles.stepCardIcon}>{s.icon}</div>
-                  <strong>{s.title}</strong>
-                  <p>{s.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+{!auditResult && (
+  <div className={styles.howItWorks}>
+    <h3>How FairLens works</h3>
+    <div className={styles.steps}>
+      {(mode === 'text' ? [
+        { icon: '📋', title: 'Paste', desc: 'Enter any AI prompt and its response' },
+        { icon: '🤖', title: 'Analyse', desc: 'Gemini 2.5 Flash scans for hidden bias' },
+        { icon: '📊', title: 'Score', desc: 'Get a bias score across 6 dimensions' },
+        { icon: '✅', title: 'Fix', desc: 'Receive an unbiased rewrite instantly' },
+      ] : [
+        { icon: '📁', title: 'Upload', desc: 'Upload any CSV dataset' },
+        { icon: '⚙️', title: 'Configure', desc: 'Select target and sensitive columns' },
+        { icon: '🧪', title: 'Train', desc: 'Model is trained and fairness measured' },
+        { icon: '⚖️', title: 'Mitigate', desc: 'Bias mitigation applied and compared' },
+      ]).map(s => (
+        <div key={s.title} className={styles.stepCard}>
+          <div className={styles.stepCardIcon}>{s.icon}</div>
+          <strong>{s.title}</strong>
+          <p>{s.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
       </main>
 
       <footer className={styles.footer}>
