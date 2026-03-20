@@ -1,0 +1,30 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.svg {
+  width: 140px;
+  height: 140px;
+}
+
+.scoreText {
+  font-size: 26px;
+  font-weight: 700;
+  font-family: var(--font);
+}
+
+.labelText {
+  font-size: 11px;
+  font-family: var(--font);
+}
+
+.levelBadge {
+  padding: 0.3rem 1rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
