@@ -5,26 +5,38 @@
   gap: 0.75rem;
 }
 
+.gaugeContainer {
+  position: relative;
+}
+
 .svg {
-  width: 140px;
-  height: 140px;
+  width: 150px;
+  height: 150px;
+  filter: drop-shadow(0 0 12px rgba(79,142,247,0.15));
 }
 
 .scoreText {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   font-family: var(--font);
 }
 
 .labelText {
-  font-size: 11px;
+  font-size: 10px;
   font-family: var(--font);
 }
 
+.confText {
+  font-size: 8.5px;
+  font-family: var(--font);
+  opacity: 0.7;
+}
+
 .levelBadge {
-  padding: 0.3rem 1rem;
+  padding: 0.3rem 1.1rem;
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.03em;
+  border: 1px solid transparent;
 }

@@ -6,10 +6,8 @@
 }
 
 @media (max-width: 700px) {
-  .wrapper {
-    grid-template-columns: 1fr;
-  }
-  .arrow { text-align: center; font-size: 1.4rem; transform: rotate(90deg); }
+  .wrapper { grid-template-columns: 1fr; }
+  .arrow { text-align: center; transform: rotate(90deg); }
 }
 
 .panel {
@@ -27,6 +25,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .badge {
@@ -34,6 +34,12 @@
   border-radius: 6px;
   font-size: 0.78rem;
   font-weight: 600;
+}
+
+.flagCount {
+  font-size: 0.75rem;
+  color: var(--red);
+  opacity: 0.8;
 }
 
 .copyBtn {

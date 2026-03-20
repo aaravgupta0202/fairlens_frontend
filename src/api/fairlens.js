@@ -5,12 +5,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-/**
- * POST /analyse
- * @param {string} prompt - the original user prompt
- * @param {string} aiResponse - the AI response to analyse
- * @returns {Promise<AnalyseResponse>}
- */
 export async function analyseText(prompt, aiResponse) {
   const { data } = await api.post('/analyse', {
     prompt,
