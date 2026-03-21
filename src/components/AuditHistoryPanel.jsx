@@ -5,23 +5,15 @@ import styles from './HistoryPanel.module.css'
 export default function AuditHistoryPanel({ onOpen, onClose }) {
   const [history, setHistory] = useState(getAuditHistory)
 
-  function handleOpen(entry) {
-    onOpen?.(entry)
-    onClose?.()
-  }
-
+  function handleOpen(entry) { onOpen?.(entry); onClose?.() }
   function handleDelete(id, e) {
     e.stopPropagation()
     deleteAuditHistoryItem(id)
     setHistory(getAuditHistory())
   }
+  function handleClear() { clearAuditHistory(); setHistory([]) }
 
-  function handleClear() {
-    clearAuditHistory()
-    setHistory([])
-  }
-
-  const levelColor = { Low: '#34d399', Moderate: '#fbbf24', High: '#f87171' }
+  const levelColor = { Low: '#34d399', Moderate: '#fbbf24', High: '#f87171', Critical: '#ef4444' }
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -43,31 +35,36 @@ export default function AuditHistoryPanel({ onOpen, onClose }) {
           </div>
         ) : (
           <div className={styles.list}>
-            {history.map(entry => (
-              <div key={entry.id} className={styles.item} onClick={() => handleOpen(entry)}>
-                <div className={styles.itemLeft}>
-                  <div className={styles.scoreBadge} style={{
-                    background: `${levelColor[entry.result.bias_level]}22`,
-                    color: levelColor[entry.result.bias_level],
-                    borderColor: `${levelColor[entry.result.bias_level]}44`,
-                  }}>
-                    {Math.round(entry.result.fairness_after)}
+            {history.map(entry => {
+              const r = entry.result
+              const level = r.bias_level || 'Moderate'
+              const color = levelColor[level] || '#fbbf24'
+              return (
+                <div key={entry.id} className={styles.item} onClick={() => handleOpen(entry)}>
+                  <div className={styles.itemLeft}>
+                    <div className={styles.scoreBadge} style={{
+                      background: `${color}22`, color, borderColor: `${color}44`,
+                    }}>
+                      {Math.round(r.bias_score || 0)}
+                    </div>
+                    <div className={styles.itemInfo}>
+                      <p className={styles.itemPrompt}>
+                        {entry.description
+                          ? entry.description.slice(0, 60) + (entry.description.length > 60 ? '…' : '')
+                          : `${r.sensitive_column || '?'} → ${r.target_column || '?'}`}
+                      </p>
+                      <span className={styles.itemMeta}>
+                        {level} Bias · {r.total_rows} rows ·{' '}
+                        {new Date(entry.timestamp).toLocaleDateString()}{' '}
+                        {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
-                  <div className={styles.itemInfo}>
-                    <p className={styles.itemPrompt}>
-                      {entry.sensitiveColumn} → {entry.targetColumn}
-                    </p>
-                    <span className={styles.itemMeta}>
-                      {entry.result.bias_level} Bias · {entry.result.total_rows} rows ·{' '}
-                      {new Date(entry.timestamp).toLocaleDateString()}{' '}
-                      {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
+                  <button className={styles.deleteBtn}
+                    onClick={e => handleDelete(entry.id, e)} title="Delete">✕</button>
                 </div>
-                <button className={styles.deleteBtn}
-                  onClick={e => handleDelete(entry.id, e)} title="Delete">✕</button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

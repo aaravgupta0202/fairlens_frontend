@@ -4,7 +4,6 @@ import { analyseText } from '../api/fairlens'
 import { auditDataset, parseCsvHeaders } from '../api/audit'
 import { saveToHistory, saveToAuditHistory, generateId, getHistory, getAuditHistory } from '../api/history'
 import DatasetUpload from '../components/DatasetUpload'
-import ColumnSelector from '../components/ColumnSelector'
 import HistoryPanel from '../components/HistoryPanel'
 import AuditHistoryPanel from '../components/AuditHistoryPanel'
 import TrendChart from '../components/TrendChart'
@@ -21,16 +20,16 @@ export default function Home() {
   const [textLoading, setTextLoading] = useState(false)
   const [textError, setTextError] = useState('')
 
-  // Audit
+  // Audit — new simplified flow
   const [csvFile, setCsvFile] = useState(null)
   const [columns, setColumns] = useState([])
+  const [description, setDescription] = useState('')
   const [targetCol, setTargetCol] = useState('')
   const [sensitiveCol, setSensitiveCol] = useState('')
-  const [sensitiveCol2, setSensitiveCol2] = useState(null)
-  const [modelType, setModelType] = useState('logistic_regression')
-  const [strategy, setStrategy] = useState('reweighing')
+  const [sensitiveCol2, setSensitiveCol2] = useState('')
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditError, setAuditError] = useState('')
+  const [descFocused, setDescFocused] = useState(false)
 
   // Shared
   const [showTextHistory, setShowTextHistory] = useState(false)
@@ -52,7 +51,7 @@ export default function Home() {
 
   function loadExample() {
     setPrompt("Who makes a better leader, a man or a woman?")
-    setAiResponse("Men tend to make better leaders because they are more decisive, assertive, and less emotional in high-pressure situations. Women are naturally more suited to supportive roles and tend to struggle with the demands of executive leadership.")
+    setAiResponse("Men tend to make better leaders because they are more decisive, assertive, and less emotional in high-pressure situations. Women are naturally more suited to supportive roles.")
     setTextError('')
   }
 
@@ -60,38 +59,45 @@ export default function Home() {
     setCsvFile(file); setAuditError('')
     try {
       const headers = await parseCsvHeaders(file)
-      setColumns(headers); setTargetCol(''); setSensitiveCol(''); setSensitiveCol2(null)
+      setColumns(headers)
+      setTargetCol(''); setSensitiveCol(''); setSensitiveCol2('')
     } catch { setAuditError('Could not read CSV headers.') }
+  }
+
+  function loadExampleDescription() {
+    setDescription('This is a dataset of student marks in 4 subjects (Maths, English, Science, History) for grades 1 to 13, with 10 students per grade. Maths and English are graded by Teacher A, Science by Teacher B, and History by Teacher C. The passing threshold is 80 marks. The dataset includes student name, gender (Male/Female), grade level, subject, marks obtained, and pass/fail status.')
   }
 
   async function handleAudit() {
     if (!csvFile) { setAuditError('Please upload a CSV file.'); return }
-    if (!targetCol) { setAuditError('Please select a target column.'); return }
-    if (!sensitiveCol) { setAuditError('Please select a sensitive attribute.'); return }
-    if (targetCol === sensitiveCol) { setAuditError('Target and sensitive columns must be different.'); return }
+    if (!description.trim()) { setAuditError('Please describe your dataset — this helps AI understand context.'); return }
     setAuditError(''); setAuditLoading(true)
     try {
-      const result = await auditDataset({ file: csvFile, targetColumn: targetCol,
-        sensitiveColumn: sensitiveCol, sensitiveColumn2: sensitiveCol2, modelType, strategy })
-      saveToAuditHistory({ id: generateId(), timestamp: Date.now(),
-        targetColumn: targetCol, sensitiveColumn: sensitiveCol, result })
-      navigate('/audit-results', { state: { result, targetColumn: targetCol, sensitiveColumn: sensitiveCol } })
+      const result = await auditDataset({
+        file: csvFile,
+        description: description.trim(),
+        targetColumn: targetCol || null,
+        sensitiveColumn: sensitiveCol || null,
+        sensitiveColumn2: sensitiveCol2 || null,
+      })
+      saveToAuditHistory({ id: generateId(), timestamp: Date.now(), description: description.trim(), result })
+      navigate('/audit-results', { state: { result, description: description.trim() } })
     } catch (err) {
       setAuditError(`Audit failed: ${err?.response?.data?.detail || err.message}`)
     } finally { setAuditLoading(false) }
   }
 
   function handleAuditHistoryOpen(entry) {
-    navigate('/audit-results', { state: { result: entry.result,
-      targetColumn: entry.targetColumn, sensitiveColumn: entry.sensitiveColumn } })
+    navigate('/audit-results', { state: { result: entry.result, description: entry.description || '' } })
   }
+
+  const canRunAudit = csvFile && description.trim().length > 10
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.logoArea}>
           <img src="/fairlens_logo.png" alt="FairLens" className={styles.logoImg} />
-          <span className={styles.logoText}></span>
         </div>
         <div className={styles.headerRight}>
           <ThemeToggle />
@@ -127,47 +133,110 @@ export default function Home() {
             <div className={styles.cardHeader}>
               <h2>Upload a dataset to audit for bias</h2>
             </div>
+
             <div className={styles.auditSteps}>
+              {/* Step 1: Upload */}
               <div className={styles.stepRow}>
                 <div className={styles.stepNum}>1</div>
                 <div className={styles.stepContent}>
                   <p className={styles.stepLabel}>Upload CSV Dataset</p>
                   <DatasetUpload onFileSelected={handleFileSelected} file={csvFile} />
-                </div>
-              </div>
-              <div className={`${styles.stepRow} ${!csvFile ? styles.stepDisabled : ''}`}>
-                <div className={styles.stepNum}>2</div>
-                <div className={styles.stepContent}>
-                  <p className={styles.stepLabel}>Configure Columns &amp; Model</p>
-                  {columns.length > 0 ? (
-                    <ColumnSelector
-                      columns={columns}
-                      targetCol={targetCol} sensitiveCol={sensitiveCol}
-                      sensitiveCol2={sensitiveCol2} modelType={modelType}
-                      strategy={strategy}
-                      onTargetChange={setTargetCol} onSensitiveChange={setSensitiveCol}
-                      onSensitiveChange2={setSensitiveCol2} onModelTypeChange={setModelType}
-                      onStrategyChange={setStrategy}
-                    />
-                  ) : (
-                    <p className={styles.stepHint}>Upload a CSV to see available columns.</p>
+                  {columns.length > 0 && (
+                    <p className={styles.columnsHint}>
+                      Detected columns: {columns.join(', ')}
+                    </p>
                   )}
                 </div>
               </div>
-              <div className={`${styles.stepRow} ${(!csvFile || !targetCol || !sensitiveCol) ? styles.stepDisabled : ''}`}>
+
+              {/* Step 2: Describe */}
+              <div className={`${styles.stepRow} ${!csvFile ? styles.stepDisabled : ''}`}>
+                <div className={styles.stepNum}>2</div>
+                <div className={styles.stepContent}>
+                  <div className={styles.descLabelRow}>
+                    <p className={styles.stepLabel}>Describe your dataset</p>
+                    <button className={styles.exampleBtn} onClick={loadExampleDescription} disabled={!csvFile}>
+                      Load example
+                    </button>
+                  </div>
+                  <p className={styles.stepHint}>
+                    Tell FairLens what this data represents — who collected it, what each column means, what the grading system or thresholds are, who the teachers/evaluators are, etc. The more context you give, the better the AI analysis.
+                  </p>
+                  <div className={`${styles.descBox} ${descFocused ? styles.descBoxFocused : ''} ${!csvFile ? styles.descBoxDisabled : ''}`}>
+                    <textarea
+                      className={styles.descTextarea}
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      onFocus={() => setDescFocused(true)}
+                      onBlur={() => setDescFocused(false)}
+                      disabled={!csvFile}
+                      placeholder="e.g. This is a student marks dataset for grades 1–13 with 10 students per grade. There are 4 subjects — Maths and English graded by Teacher A, Science by Teacher B, and History by Teacher C. Pass threshold is 80. Gender column has Male/Female values..."
+                      rows={5}
+                    />
+                    <div className={styles.descFooter}>
+                      <span className={styles.descCount}>{description.length} characters</span>
+                      {description.length > 0 && description.length < 50 && (
+                        <span className={styles.descWarn}>⚠ Add more detail for better analysis</span>
+                      )}
+                      {description.length >= 50 && (
+                        <span className={styles.descOk}>✓ Good description</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Optional columns */}
+              <div className={`${styles.stepRow} ${(!csvFile || !description.trim()) ? styles.stepDisabled : ''}`}>
                 <div className={styles.stepNum}>3</div>
                 <div className={styles.stepContent}>
-                  <p className={styles.stepLabel}>Run Fairness Audit</p>
+                  <p className={styles.stepLabel}>Optional: Specify columns <span className={styles.optionalTag}>optional</span></p>
                   <p className={styles.stepHint}>
-                    FairLens trains a model, measures bias across all 5 fairness metrics, applies your chosen mitigation strategy, and delivers a Gemini-powered explanation. Download the debiased dataset and model after.
+                    If you mention your sensitive attribute and target column in the description, FairLens AI will auto-detect them. Or specify them explicitly below.
+                  </p>
+                  {columns.length > 0 && (
+                    <div className={styles.colSelectors}>
+                      <div className={styles.colSel}>
+                        <label className={styles.colLabel}>Target column (what to predict)</label>
+                        <select className={styles.colSelect} value={targetCol}
+                          onChange={e => setTargetCol(e.target.value)}
+                          disabled={!csvFile || !description.trim()}>
+                          <option value="">— Auto-detect —</option>
+                          {columns.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div className={styles.colSel}>
+                        <label className={styles.colLabel}>Sensitive attribute (e.g. Gender, Race)</label>
+                        <select className={styles.colSelect} value={sensitiveCol}
+                          onChange={e => setSensitiveCol(e.target.value)}
+                          disabled={!csvFile || !description.trim()}>
+                          <option value="">— Auto-detect —</option>
+                          {columns.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 4: Run */}
+              <div className={`${styles.stepRow} ${!canRunAudit ? styles.stepDisabled : ''}`}>
+                <div className={styles.stepNum}>4</div>
+                <div className={styles.stepContent}>
+                  <p className={styles.stepLabel}>Run AI Fairness Audit</p>
+                  <p className={styles.stepHint}>
+                    FairLens sends your dataset statistics and description to Gemini 2.5 Flash. It computes fairness metrics, detects bias patterns, and returns a structured audit report with findings, charts, and recommendations.
                   </p>
                 </div>
               </div>
             </div>
+
             {auditError && <p className={styles.error}>{auditError}</p>}
             <button className={styles.analyseBtn} onClick={handleAudit}
-              disabled={auditLoading || !csvFile || !targetCol || !sensitiveCol}>
-              {auditLoading ? <><span className={styles.spinner} />Training model &amp; auditing...</> : '📊 Run Fairness Audit'}
+              disabled={auditLoading || !canRunAudit}>
+              {auditLoading
+                ? <><span className={styles.spinner} />Analysing with Gemini 2.5 Flash...</>
+                : '📊 Run Fairness Audit'}
             </button>
           </div>
         )}
@@ -217,9 +286,9 @@ export default function Home() {
           <div className={styles.steps}>
             {(mode === 'dataset' ? [
               { icon: '📁', title: 'Upload', desc: 'Upload any CSV dataset' },
-              { icon: '⚙️', title: 'Configure', desc: 'Select columns, model & strategy' },
-              { icon: '🧪', title: 'Train', desc: 'Model trained, 5 fairness metrics measured' },
-              { icon: '⚖️', title: 'Mitigate', desc: 'Bias fixed, debiased files ready' },
+              { icon: '✍️', title: 'Describe', desc: 'Explain your dataset in plain English' },
+              { icon: '🤖', title: 'Analyse', desc: 'Gemini reads stats and detects bias' },
+              { icon: '📊', title: 'Report', desc: 'Full report with charts + chat' },
             ] : [
               { icon: '📋', title: 'Paste', desc: 'Enter any AI prompt and response' },
               { icon: '🤖', title: 'Analyse', desc: 'Gemini 2.5 Flash scans for bias' },

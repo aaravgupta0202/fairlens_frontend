@@ -224,155 +224,141 @@ export async function exportToPdf(prompt, aiResponse, result) {
 }
 
 
-// ── AUDIT PDF ─────────────────────────────────────────────────────────────────
+// ── AUDIT PDF (new schema) ─────────────────────────────────────────────────────
 export async function exportAuditToPdf(result, targetColumn, sensitiveColumn) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const MARGIN = 18, CONTENT_W = 210 - MARGIN * 2
 
-  const riskC = { Low: C.green, Medium: C.amber, High: C.red }
-  const beforeC = riskC[result.risk_label] || C.red
-  const afterC  = riskC[result.risk_label_after] || C.green
+  const scoreColor = result.bias_score < 30 ? C.green : result.bias_score < 60 ? C.amber : result.bias_score < 80 ? [249, 115, 22] : C.red
 
   let y = header(doc, 'Dataset Fairness Audit Report',
-    `Target: ${targetColumn}  |  Sensitive: ${sensitiveColumn}  |  ${result.total_rows} rows  |  Model: ${result.model_type?.replace(/_/g,' ')}  |  Strategy: ${result.strategy?.replace(/_/g,' ')}`)
+    `${result.bias_level} Bias  |  Score: ${Math.round(result.bias_score)}/100  |  ${result.total_rows} rows  |  Sensitive: ${sensitiveColumn || 'auto'}  |  Target: ${targetColumn || 'auto'}`)
 
-  // Risk score boxes
+  // Bias score box
   doc.setFillColor(...C.surface)
-  doc.roundedRect(MARGIN, y, (CONTENT_W / 2) - 4, 30, 4, 4, 'F')
-  doc.setFillColor(...beforeC); doc.rect(MARGIN, y, 4, 30, 'F')
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
-  doc.text('RISK BEFORE', MARGIN + 8, y + 7)
-  doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(...beforeC)
-  doc.text(`${Math.round(result.risk_score)}`, MARGIN + 8, y + 21)
-  doc.setFontSize(9); doc.setTextColor(...C.muted); doc.text('/ 100', MARGIN + 26, y + 21)
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...beforeC)
-  doc.text(result.risk_label + ' Risk', MARGIN + 40, y + 21)
+  doc.roundedRect(MARGIN, y, CONTENT_W, 28, 4, 4, 'F')
+  doc.setFillColor(...scoreColor)
+  doc.roundedRect(MARGIN, y, 50, 28, 4, 4, 'F')
+  doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.bg)
+  doc.text(`${Math.round(result.bias_score)}`, MARGIN + 8, y + 17)
+  doc.setFontSize(9); doc.text('/ 100', MARGIN + 26, y + 17)
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(...scoreColor)
+  doc.text(`${result.bias_level} Bias`, MARGIN + 58, y + 13)
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.muted)
+  doc.text(result.risk_label, MARGIN + 58, y + 22)
+  y += 36
 
-  const x2 = MARGIN + (CONTENT_W / 2) + 4
-  doc.setFillColor(...C.surface)
-  doc.roundedRect(x2, y, (CONTENT_W / 2) - 4, 30, 4, 4, 'F')
-  doc.setFillColor(...afterC); doc.rect(x2, y, 4, 30, 'F')
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
-  doc.text('RISK AFTER', x2 + 8, y + 7)
-  doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(...afterC)
-  doc.text(`${Math.round(result.risk_score_after)}`, x2 + 8, y + 21)
-  doc.setFontSize(9); doc.setTextColor(...C.muted); doc.text('/ 100', x2 + 26, y + 21)
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...afterC)
-  doc.text(result.risk_label_after + ' Risk', x2 + 40, y + 21)
-  y += 38
-
-  // All 5 metrics as bar chart — before & after side by side
-  y = section(doc, 'Fairness Metrics — Before vs After', y, MARGIN)
-
-  const metricKeys = [
-    { key: 'demographic_parity_difference', label: 'Dem. Parity Diff',    threshold: 0.10, lowerBetter: true  },
-    { key: 'equalized_odds_difference',     label: 'Equalized Odds Diff', threshold: 0.10, lowerBetter: true  },
-    { key: 'disparate_impact_ratio',        label: 'Disparate Impact',    threshold: 0.80, lowerBetter: false },
-    { key: 'accuracy_parity_difference',    label: 'Accuracy Parity Diff',threshold: 0.05, lowerBetter: true  },
-    { key: 'selection_rate_difference',     label: 'Selection Rate Diff', threshold: 0.10, lowerBetter: true  },
-  ]
-
-  const barH = 6, barGap = 3, labelW = 42, valueW = 14, barAreaW = CONTENT_W - labelW - valueW * 2 - 8
-
-  // Header row
-  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
-  doc.text('METRIC', MARGIN, y)
-  doc.text('BEFORE', MARGIN + labelW + barAreaW * 0.25, y)
-  doc.text('AFTER', MARGIN + labelW + barAreaW * 0.75, y)
-  doc.text('THRESHOLD', MARGIN + labelW + barAreaW + valueW + 2, y)
+  // Fairness metrics
+  y = section(doc, 'Fairness Metrics', y, MARGIN)
+  const metData = (result.metrics || []).map(m => ({
+    label: m.name,
+    value: m.value,
+    maxValue: Math.max(m.value * 1.5, m.threshold ? m.threshold * 2 : 1, 0.01),
+    valueLabel: m.value.toFixed(4),
+    color: m.flagged ? C.red : C.green,
+  }))
+  y = drawBarChart(doc, metData, MARGIN, y, CONTENT_W - 44, 0, '', MARGIN)
   y += 4
 
-  metricKeys.forEach(({ key, label, threshold, lowerBetter }) => {
-    const before = result.fairness_metrics_before?.[key] ?? 0
-    const after  = result.fairness_metrics_after?.[key]  ?? 0
-    const flagB  = result.bias_flags_before?.[key]
-    const flagA  = result.bias_flags_after?.[key]
-
-    const maxVal = lowerBetter ? Math.max(before, after, threshold * 1.5, 0.01) : 1.0
-    const beforeW = Math.max(0, (before / maxVal) * (barAreaW / 2 - 3))
-    const afterW  = Math.max(0, (after  / maxVal) * (barAreaW / 2 - 3))
-
-    const beforeColor = flagB ? C.red : C.green
-    const afterColor  = flagA ? C.red : C.green
-
-    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-    doc.text(label, MARGIN, y + barH / 2 + 1.5)
-
-    // Before bar
-    doc.setFillColor(...C.surface2)
-    doc.roundedRect(MARGIN + labelW, y, barAreaW / 2 - 3, barH, 1, 1, 'F')
-    doc.setFillColor(...beforeColor)
-    if (beforeW > 0) doc.roundedRect(MARGIN + labelW, y, beforeW, barH, 1, 1, 'F')
-    doc.setFontSize(6); doc.setTextColor(...beforeColor)
-    doc.text(before.toFixed(3), MARGIN + labelW + barAreaW / 2 - 2, y + barH / 2 + 1.5)
-
-    // After bar
-    const afterX = MARGIN + labelW + barAreaW / 2 + 2
-    doc.setFillColor(...C.surface2)
-    doc.roundedRect(afterX, y, barAreaW / 2 - 3, barH, 1, 1, 'F')
-    doc.setFillColor(...afterColor)
-    if (afterW > 0) doc.roundedRect(afterX, y, afterW, barH, 1, 1, 'F')
-    doc.setTextColor(...afterColor)
-    doc.text(after.toFixed(3), afterX + barAreaW / 2 - 2, y + barH / 2 + 1.5)
-
-    // Threshold
-    doc.setTextColor(...C.muted)
-    doc.text(`${lowerBetter ? '<' : '≥'} ${threshold}`, MARGIN + labelW + barAreaW + valueW + 2, y + barH / 2 + 1.5)
-
+  // Group stats table
+  if (result.group_stats?.length > 0) {
+    if (y > 200) { doc.addPage(); y = 20 }
+    y = section(doc, 'Group Statistics', y, MARGIN)
+    const cols = ['Group', 'Count', 'Avg Marks', 'Pass', 'Fail', 'Pass Rate']
+    const colW = [35, 18, 22, 15, 15, 25]
+    let cx = MARGIN
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
+    cols.forEach((col, i) => { doc.text(col, cx, y); cx += colW[i] })
+    y += 5
     doc.setDrawColor(...C.border); doc.setLineWidth(0.3)
-    doc.line(MARGIN, y + barH + barGap, MARGIN + CONTENT_W, y + barH + barGap)
-    y += barH + barGap + 2
-  })
-  y += 4
+    doc.line(MARGIN, y, MARGIN + CONTENT_W, y); y += 3
 
-  // Accuracy comparison bar
-  y = section(doc, 'Model Accuracy', y, MARGIN)
-  y = drawBarChart(doc, [
-    { label: 'Before', value: result.accuracy_before, maxValue: 100, valueLabel: `${result.accuracy_before}%`, color: C.red },
-    { label: 'After',  value: result.accuracy_after,  maxValue: 100, valueLabel: `${result.accuracy_after}%`,  color: C.green },
-  ], MARGIN, y, CONTENT_W - 40, 0, '', MARGIN)
-  y += 4
+    result.group_stats.forEach(g => {
+      if (y > 265) { doc.addPage(); y = 20 }
+      cx = MARGIN
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
+      const row = [g.group, String(g.count), g.avg_marks ? g.avg_marks.toFixed(1) : '—',
+        String(g.pass_count), String(g.fail_count), `${(g.pass_rate * 100).toFixed(1)}%`]
+      row.forEach((val, i) => {
+        if (i === 5) doc.setTextColor(...(g.pass_rate > 0.7 ? C.green : g.pass_rate > 0.4 ? C.amber : C.red))
+        else doc.setTextColor(...C.text)
+        doc.text(val, cx, y)
+        cx += colW[i]
+      })
+      y += 6
+      doc.setDrawColor(...C.border); doc.setLineWidth(0.2)
+      doc.line(MARGIN, y, MARGIN + CONTENT_W, y); y += 2
+    })
+    y += 4
+  }
 
-  // Per-group charts
-  if (y > 180) { doc.addPage(); y = 20 }
-  y = section(doc, 'Per-Group Metrics — Before Mitigation', y, MARGIN)
-  y = drawGroupedBars(doc, result.group_metrics_before || {}, MARGIN, y, CONTENT_W, '')
-  y += 4
+  // Subject analysis
+  if (result.subject_analysis?.length > 0) {
+    if (y > 200) { doc.addPage(); y = 20 }
+    y = section(doc, 'Subject Analysis', y, MARGIN)
+    result.subject_analysis.forEach(s => {
+      if (y > 265) { doc.addPage(); y = 20 }
+      doc.setFillColor(...(s.flagged ? [60,20,20] : C.surface))
+      doc.roundedRect(MARGIN, y, CONTENT_W, 10, 2, 2, 'F')
+      doc.setFillColor(...(s.flagged ? C.red : C.green)); doc.rect(MARGIN, y, 3, 10, 'F')
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...(s.flagged ? C.red : C.green))
+      doc.text(s.subject, MARGIN + 6, y + 6.5)
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.muted)
+      const note = `${s.teacher ? 'Teacher '+s.teacher+' · ' : ''}Avg: ${s.avg_marks.toFixed(1)} · Pass: ${(s.pass_rate*100).toFixed(1)}%${s.bias_note ? ' · ' + s.bias_note : ''}`
+      const noteLines = doc.splitTextToSize(note, CONTENT_W - 60)
+      doc.text(noteLines[0] || note, MARGIN + 40, y + 6.5)
+      y += 14
+    })
+    y += 2
+  }
 
-  if (y > 180) { doc.addPage(); y = 20 }
-  y = section(doc, 'Per-Group Metrics — After Mitigation', y, MARGIN)
-  y = drawGroupedBars(doc, result.group_metrics_after || {}, MARGIN, y, CONTENT_W, '')
-  y += 6
-
-  // Gemini analysis
-  if (y > 210) { doc.addPage(); y = 20 }
-  y = section(doc, 'Gemini 2.5 Flash Audit Analysis', y, MARGIN)
+  // Summary
+  if (y > 200) { doc.addPage(); y = 20 }
+  y = section(doc, 'AI Analysis Summary', y, MARGIN)
   doc.setFillColor(...C.surface)
-  const msgLines = doc.splitTextToSize(result.message || '', CONTENT_W - 8)
-  const msgH = Math.min(msgLines.length * 4.8 + 12, 100)
-  doc.roundedRect(MARGIN, y, CONTENT_W, msgH, 3, 3, 'F')
-  doc.setFillColor(...C.primary); doc.rect(MARGIN, y, 3, msgH, 'F')
+  const sumLines = doc.splitTextToSize(result.summary || '', CONTENT_W - 8)
+  const sumH = Math.min(sumLines.length * 4.8 + 12, 80)
+  doc.roundedRect(MARGIN, y, CONTENT_W, sumH, 3, 3, 'F')
+  doc.setFillColor(...C.primary); doc.rect(MARGIN, y, 3, sumH, 'F')
   doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-  doc.text(msgLines.slice(0, Math.floor(msgH / 4.8)), MARGIN + 6, y + 8)
-  y += msgH + 6
+  const maxSumLines = Math.floor((sumH - 8) / 4.8)
+  doc.text(sumLines.slice(0, maxSumLines), MARGIN + 6, y + 8)
+  y += sumH + 6
 
-  // Key insights
-  if (result.insights?.length > 0) {
-    if (y > 220) { doc.addPage(); y = 20 }
-    y = section(doc, 'Key Insights', y, MARGIN)
-
-    result.insights.forEach((insight, i) => {
-      if (y > 258) { doc.addPage(); y = 20 }
-      const iLines = doc.splitTextToSize(`${i + 1}.  ${insight}`, CONTENT_W - 10)
-      const iH = iLines.length * 4.5 + 8
+  // Key findings
+  if (result.key_findings?.length > 0) {
+    if (y > 210) { doc.addPage(); y = 20 }
+    y = section(doc, 'Key Findings', y, MARGIN)
+    result.key_findings.forEach((finding, i) => {
+      if (y > 262) { doc.addPage(); y = 20 }
+      const fLines = doc.splitTextToSize(`${i + 1}.  ${finding}`, CONTENT_W - 10)
+      const fH = fLines.length * 4.5 + 8
       doc.setFillColor(...C.surface)
-      doc.roundedRect(MARGIN, y, CONTENT_W, iH, 3, 3, 'F')
+      doc.roundedRect(MARGIN, y, CONTENT_W, fH, 3, 3, 'F')
       doc.setFillColor(...(i % 2 === 0 ? C.primary : C.accent))
-      doc.roundedRect(MARGIN, y, 3, iH, 1, 1, 'F')
+      doc.roundedRect(MARGIN, y, 3, fH, 1, 1, 'F')
       doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-      doc.text(iLines, MARGIN + 6, y + 6)
-      y += iH + 4
+      doc.text(fLines, MARGIN + 6, y + 6)
+      y += fH + 4
+    })
+    y += 2
+  }
+
+  // Recommendations
+  if (result.recommendations?.length > 0) {
+    if (y > 210) { doc.addPage(); y = 20 }
+    y = section(doc, 'Recommendations', y, MARGIN)
+    result.recommendations.forEach((rec, i) => {
+      if (y > 262) { doc.addPage(); y = 20 }
+      const rLines = doc.splitTextToSize(`→  ${rec}`, CONTENT_W - 10)
+      const rH = rLines.length * 4.5 + 8
+      doc.setFillColor(...C.surface)
+      doc.roundedRect(MARGIN, y, CONTENT_W, rH, 3, 3, 'F')
+      doc.setFillColor(...C.green); doc.roundedRect(MARGIN, y, 3, rH, 1, 1, 'F')
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
+      doc.text(rLines, MARGIN + 6, y + 6)
+      y += rH + 4
     })
   }
 

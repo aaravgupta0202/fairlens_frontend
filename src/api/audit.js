@@ -27,32 +27,24 @@ export function parseCsvHeaders(file) {
   })
 }
 
-export async function auditDataset({
-  file, targetColumn, sensitiveColumn,
-  sensitiveColumn2 = null,
-  modelType = 'logistic_regression',
-  strategy = 'reweighing',
-}) {
+export async function auditDataset({ file, description, targetColumn, sensitiveColumn, sensitiveColumn2 }) {
   const base64 = await fileToBase64(file)
   const { data } = await api.post('/audit-dataset', {
     dataset: base64,
-    target_column: targetColumn,
-    sensitive_column: sensitiveColumn,
+    description: description || '',
+    target_column: targetColumn || null,
+    sensitive_column: sensitiveColumn || null,
     sensitive_column_2: sensitiveColumn2 || null,
-    model_type: modelType,
-    strategy,
   })
   return data
 }
 
-export function downloadBase64File(b64string, filename, mimeType) {
-  const byteChars = atob(b64string)
-  const byteNums = Array.from(byteChars, c => c.charCodeAt(0))
-  const blob = new Blob([new Uint8Array(byteNums)], { type: mimeType })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
+export async function sendChatMessage({ datasetDescription, auditSummary, conversation, message }) {
+  const { data } = await api.post('/audit-chat', {
+    dataset_description: datasetDescription,
+    audit_summary: auditSummary,
+    conversation,
+    message,
+  })
+  return data.reply
 }
