@@ -54,8 +54,8 @@ export default function Results() {
         <div className={styles.headerLeft}>
           <button className={styles.backBtn} onClick={() => navigate('/')}>← Back</button>
           <div className={styles.logoArea}>
-            <img src="/fairlens-logo.png" alt="FairLens" className={styles.logoImg} />
-            <span className={styles.logoText}>FairLens</span>
+            <img src="/fairlens_logo.png" alt="FairLens" className={styles.logoImg} />
+            <span className={styles.logoText}></span>
           </div>
         </div>
         <div className={styles.headerActions}>

@@ -90,8 +90,8 @@ export default function Home() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.logoArea}>
-          <img src="/fairlens-logo.png" alt="FairLens" className={styles.logoImg} />
-          <span className={styles.logoText}>FairLens</span>
+          <img src="/fairlens_logo.png" alt="FairLens" className={styles.logoImg} />
+          <span className={styles.logoText}></span>
         </div>
         <div className={styles.headerRight}>
           <ThemeToggle />
