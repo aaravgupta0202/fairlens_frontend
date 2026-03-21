@@ -3,9 +3,10 @@ import BiasGauge from './BiasGauge'
 import FairnessComparisonChart from './FairnessComparisonChart'
 import { downloadBase64File } from '../api/audit'
 import { buildShareUrl } from '../api/share'
+import { exportAuditToPdf } from '../api/exportPdf'
 import styles from './AuditResults.module.css'
 
-export default function AuditResults({ result, targetColumn, sensitiveColumn, onReset }) {
+export default function AuditResults({ result, targetColumn, sensitiveColumn, onReset, standalone = false }) {
   const {
     accuracy_before, accuracy_after,
     fairness_before, fairness_after,
@@ -18,6 +19,8 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
   } = result
 
   const [shareState, setShareState] = useState('idle')
+  const [exporting, setExporting] = useState(false)
+
   const fairnessLevel = fairness_after >= 85 ? 'Low' : fairness_after >= 65 ? 'Moderate' : 'High'
   const fairnessLevelBefore = fairness_before >= 85 ? 'Low' : fairness_before >= 65 ? 'Moderate' : 'High'
   const accuracyDiff = (accuracy_after - accuracy_before).toFixed(1)
@@ -36,13 +39,29 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
   }
 
   async function handleShare() {
-    const url = buildShareUrl({ type: 'audit', result, targetColumn, sensitiveColumn })
-    if (!url) return
+    // Build share URL pointing to /audit-results with full state encoded
+    const shareData = {
+      type: 'audit',
+      result,
+      targetColumn,
+      sensitiveColumn,
+    }
+    const url = buildShareUrl(shareData)
+    if (!url) { setShareState('error'); return }
     try {
       await navigator.clipboard.writeText(url)
       setShareState('copied')
       setTimeout(() => setShareState('idle'), 2500)
     } catch { setShareState('error') }
+  }
+
+  async function handleExportPdf() {
+    setExporting(true)
+    try {
+      await exportAuditToPdf({ result, targetColumn, sensitiveColumn })
+    } finally {
+      setExporting(false)
+    }
   }
 
   const shareLabel = { idle: '🔗 Share', copied: '✓ Copied!', error: 'Failed' }[shareState]
@@ -58,16 +77,24 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
           </h3>
           <p className={styles.subtitle}>
             {total_rows} rows · {feature_columns.length} features analysed
+            {targetColumn && ` · predicting "${targetColumn}"`}
           </p>
         </div>
         <div className={styles.headerActions}>
-          <button className={`${styles.actionBtn} ${shareState === 'copied' ? styles.actionSuccess : ''}`}
-            onClick={handleShare}>{shareLabel}</button>
+          <button
+            className={`${styles.actionBtn} ${shareState === 'copied' ? styles.actionSuccess : ''}`}
+            onClick={handleShare}>{shareLabel}
+          </button>
+          <button className={styles.actionBtn} onClick={handleExportPdf} disabled={exporting}>
+            {exporting ? '⏳ Exporting...' : '📄 Export PDF'}
+          </button>
           <button className={styles.actionBtn} onClick={handleDownloadDataset}
-            disabled={!debiased_dataset}>⬇ Debiased Dataset</button>
+            disabled={!debiased_dataset}>⬇ Dataset</button>
           <button className={styles.actionBtn} onClick={handleDownloadModel}
-            disabled={!debiased_model}>⬇ Debiased Model</button>
-          <button className={styles.resetBtn} onClick={onReset}>← New Audit</button>
+            disabled={!debiased_model}>⬇ Model</button>
+          {!standalone && (
+            <button className={styles.resetBtn} onClick={onReset}>← New Audit</button>
+          )}
         </div>
       </div>
 
@@ -82,13 +109,13 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
       <div className={styles.gaugesRow}>
         <div className={styles.card}>
           <p className={styles.cardLabel}>Fairness Score — Before</p>
-          <BiasGauge score={fairness_before} level={fairnessLevelBefore} />
+          <BiasGauge score={fairness_before} level={fairnessLevelBefore} fairnessMode={true} />
           <p className={styles.gaugeNote}>DPD: {dp_difference_before}</p>
         </div>
         <div className={styles.arrowCol}>→</div>
         <div className={styles.card}>
           <p className={styles.cardLabel}>Fairness Score — After Mitigation</p>
-          <BiasGauge score={fairness_after} level={fairnessLevel} />
+          <BiasGauge score={fairness_after} level={fairnessLevel} fairnessMode={true} />
           <p className={styles.gaugeNote}>DPD: {dp_difference_after}</p>
         </div>
       </div>
@@ -135,10 +162,7 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <thead>
-              <tr>
-                <th>Group</th><th>Sample Size</th>
-                <th>Accuracy</th><th>Positive Rate</th>
-              </tr>
+              <tr><th>Group</th><th>Sample Size</th><th>Accuracy</th><th>Positive Rate</th></tr>
             </thead>
             <tbody>
               {Object.entries(group_metrics_after).map(([group, m]) => (

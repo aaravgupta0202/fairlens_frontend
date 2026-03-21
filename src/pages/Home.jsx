@@ -75,13 +75,13 @@ export default function Home() {
     if (!targetCol) { setAuditError('Please select a target column.'); return }
     if (!sensitiveCol) { setAuditError('Please select a sensitive attribute.'); return }
     if (targetCol === sensitiveCol) { setAuditError('Target and sensitive columns must be different.'); return }
-    setAuditError(''); setAuditLoading(true)
+        setAuditError(''); setAuditLoading(true)
     try {
       const result = await auditDataset({ file: csvFile, targetColumn: targetCol,
         sensitiveColumn: sensitiveCol, sensitiveColumn2: sensitiveCol2, modelType })
       saveToAuditHistory({ id: generateId(), timestamp: Date.now(),
         targetColumn: targetCol, sensitiveColumn: sensitiveCol, result })
-      setAuditResult(result)
+      navigate('/audit-results', { state: { result, targetColumn: targetCol, sensitiveColumn: sensitiveCol } })
     } catch (err) {
       setAuditError(`Audit failed: ${err?.response?.data?.detail || err.message}`)
     } finally { setAuditLoading(false) }

@@ -1,31 +1,27 @@
 /**
  * share.js
- * Encodes/decodes result data as a compressed URL parameter
- * so analyses can be shared as a link with no backend needed.
+ * Encodes/decodes result data as a URL parameter for sharing.
+ * Supports both text analysis (/results) and audit results (/audit-results).
  */
 
 export function encodeShareData(data) {
   try {
     const json = JSON.stringify(data)
-    const encoded = btoa(encodeURIComponent(json))
-    return encoded
-  } catch {
-    return null
-  }
+    return btoa(encodeURIComponent(json))
+  } catch { return null }
 }
 
 export function decodeShareData(encoded) {
   try {
-    const json = decodeURIComponent(atob(encoded))
-    return JSON.parse(json)
-  } catch {
-    return null
-  }
+    return JSON.parse(decodeURIComponent(atob(encoded)))
+  } catch { return null }
 }
 
 export function buildShareUrl(data) {
   const encoded = encodeShareData(data)
   if (!encoded) return null
-  const base = window.location.origin + '/results'
-  return `${base}?shared=${encoded}`
+
+  // Route audit shares to /audit-results, text shares to /results
+  const route = data.type === 'audit' ? '/audit-results' : '/results'
+  return `${window.location.origin}${route}?shared=${encoded}`
 }
