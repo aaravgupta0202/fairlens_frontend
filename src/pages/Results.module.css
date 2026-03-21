@@ -4,6 +4,7 @@
   flex-direction: column;
   align-items: center;
   padding: 0 1rem 3rem;
+  background: var(--bg);
 }
 
 .header {
@@ -19,10 +20,13 @@
 
 .headerLeft { display: flex; align-items: center; gap: 1rem; }
 
-.logo {
-  font-size: 1.2rem;
+.logoArea { display: flex; align-items: center; gap: 0.6rem; }
+.logoImg { height: 32px; width: auto; object-fit: contain; }
+.logoText {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
   font-weight: 700;
-  background: linear-gradient(135deg, #4f8ef7, #a78bfa);
+  background: var(--grad);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -30,28 +34,30 @@
 
 .backBtn {
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   color: var(--text-muted);
   padding: 0.45rem 1rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   font-size: 0.88rem;
+  font-weight: 500;
   transition: all 0.2s;
 }
-.backBtn:hover { border-color: var(--accent); color: var(--accent); }
+.backBtn:hover { border-color: var(--primary); color: var(--primary); box-shadow: var(--shadow-glow); }
 
 .headerActions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
 .actionBtn {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   color: var(--text-muted);
   padding: 0.45rem 0.9rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   font-size: 0.85rem;
+  font-weight: 500;
   transition: all 0.2s;
   white-space: nowrap;
 }
-.actionBtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.actionBtn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
 .actionBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 .actionSuccess { border-color: var(--green) !important; color: var(--green) !important; }
 
@@ -63,33 +69,35 @@
   gap: 1.25rem;
 }
 
-/* Banner — same as audit */
 .banner {
-  padding: 0.85rem 1.1rem;
+  padding: 0.9rem 1.2rem;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
+  font-weight: 500;
 }
-.bannerHigh { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--red); }
-.bannerModerate { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: var(--amber); }
-.bannerLow { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.3); color: var(--green); }
+.bannerHigh { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.35); color: var(--red); }
+.bannerModerate { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.35); color: var(--amber); }
+.bannerLow { background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.35); color: var(--green); }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .cardTitle {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--text-muted);
+  font-family: var(--font-display);
 }
 
 .topRow {
@@ -103,14 +111,13 @@
 .gaugeWrapper { display: flex; justify-content: center; padding: 0.5rem 0; }
 .gaugeHint { font-size: 0.83rem; color: var(--text-muted); line-height: 1.5; text-align: center; }
 .chartCard { justify-content: flex-start; }
-
-.trendHint { font-size: 0.83rem; color: var(--text-muted); text-align: center; opacity: 0.7; }
+.trendHint { font-size: 0.83rem; color: var(--text-faint); text-align: center; }
 
 .promptText {
   font-size: 0.95rem;
   color: var(--text-muted);
   line-height: 1.6;
-  background: var(--surface2);
+  background: var(--bg2);
   padding: 0.9rem 1rem;
   border-radius: var(--radius-sm);
   font-style: italic;
@@ -118,8 +125,7 @@
 
 .footer {
   margin-top: 3rem;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  opacity: 0.5;
+  color: var(--text-faint);
+  font-size: 0.78rem;
   text-align: center;
 }

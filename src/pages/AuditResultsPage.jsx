@@ -33,9 +33,13 @@ export default function AuditResultsPage() {
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <button className={styles.backBtn} onClick={() => navigate('/')}>← Back</button>
-          <div className={styles.logo}>⚖ FairLens</div>
+          <div className={styles.logoArea}>
+            <img src="/fairlens-logo.png" alt="FairLens" className={styles.logoImg} />
+            <span className={styles.logoText}>FairLens</span>
+          </div>
         </div>
         <div className={styles.headerActions}>
+          <ThemeToggle />
           <button className={styles.actionBtn} onClick={() => setShowHistory(true)}>
             📊 Audit History
           </button>
