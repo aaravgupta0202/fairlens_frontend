@@ -28,6 +28,7 @@ export default function Home() {
   const [sensitiveCol, setSensitiveCol] = useState('')
   const [sensitiveCol2, setSensitiveCol2] = useState(null)
   const [modelType, setModelType] = useState('logistic_regression')
+  const [strategy, setStrategy] = useState('reweighing')
   const [auditLoading, setAuditLoading] = useState(false)
   const [auditError, setAuditError] = useState('')
   const [auditResult, setAuditResult] = useState(null)
@@ -78,7 +79,7 @@ export default function Home() {
         setAuditError(''); setAuditLoading(true)
     try {
       const result = await auditDataset({ file: csvFile, targetColumn: targetCol,
-        sensitiveColumn: sensitiveCol, sensitiveColumn2: sensitiveCol2, modelType })
+        sensitiveColumn: sensitiveCol, sensitiveColumn2: sensitiveCol2, modelType, strategy, })
       saveToAuditHistory({ id: generateId(), timestamp: Date.now(),
         targetColumn: targetCol, sensitiveColumn: sensitiveCol, result })
       navigate('/audit-results', { state: { result, targetColumn: targetCol, sensitiveColumn: sensitiveCol } })
@@ -167,6 +168,7 @@ export default function Home() {
                           sensitiveCol2={sensitiveCol2} modelType={modelType}
                           onTargetChange={setTargetCol} onSensitiveChange={setSensitiveCol}
                           onSensitiveChange2={setSensitiveCol2} onModelTypeChange={setModelType}
+                          strategy={strategy} onStrategyChange={setStrategy}
                         />
                       ) : (
                         <p className={styles.stepHint}>Upload a CSV to see available columns.</p>
