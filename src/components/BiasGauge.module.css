@@ -2,41 +2,34 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 10px;
 }
-
-.gaugeContainer {
-  position: relative;
-}
-
 .svg {
-  width: 150px;
-  height: 150px;
-  filter: drop-shadow(0 0 12px rgba(79,142,247,0.15));
+  width: 140px;
+  height: 140px;
+  filter: drop-shadow(0 0 16px rgba(0,0,0,0.3));
 }
-
 .scoreText {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 700;
-  font-family: var(--font);
+  font-family: var(--font-display);
 }
-
-.labelText {
+.subText {
   font-size: 10px;
-  font-family: var(--font);
-}
-
-.confText {
-  font-size: 8.5px;
   font-family: var(--font);
   opacity: 0.7;
 }
-
-.levelBadge {
-  padding: 0.3rem 1.1rem;
+.confText {
+  font-size: 8.5px;
+  font-family: var(--font);
+  opacity: 0.6;
+}
+.badge {
+  padding: 4px 14px;
   border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   border: 1px solid transparent;
+  text-transform: uppercase;
 }

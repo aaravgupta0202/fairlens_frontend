@@ -1,71 +1,54 @@
 import { useEffect, useState } from 'react'
 import styles from './BiasGauge.module.css'
 
-/**
- * BiasGauge
- * Default (text bias): 100 = fully biased = RED, 0 = no bias = GREEN
- * fairnessMode (dataset audit): 100 = fully fair = GREEN, 0 = no fairness = RED
- */
-export default function BiasGauge({ score, level, confidence, fairnessMode = false }) {
-  const [animatedScore, setAnimatedScore] = useState(0)
-  const radius = 54
+export default function BiasGauge({ score, level, confidence }) {
+  const [animated, setAnimated] = useState(0)
+  const radius = 52
   const circumference = 2 * Math.PI * radius
 
   useEffect(() => {
     const start = performance.now()
-    const duration = 900
+    const duration = 1000
     function step(now) {
-      const progress = Math.min((now - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      setAnimatedScore(score * eased)
-      if (progress < 1) requestAnimationFrame(step)
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setAnimated(score * eased)
+      if (t < 1) requestAnimationFrame(step)
     }
     requestAnimationFrame(step)
   }, [score])
 
-  const filled = (animatedScore / 100) * circumference
-  const gap = circumference - filled
-
-  let color
-  if (fairnessMode) {
-    // Dataset audit: higher = fairer = green
-    color = score >= 85 ? '#34d399' : score >= 65 ? '#fbbf24' : '#f87171'
-  } else {
-    // Text bias: higher score = more biased = red
-    color = score >= 65 ? '#f87171' : score >= 30 ? '#fbbf24' : '#34d399'
-  }
-
-  const badgeLabel = fairnessMode
-    ? (score >= 85 ? 'Low Bias' : score >= 65 ? 'Moderate Bias' : 'High Bias')
-    : level ? `${level} Bias` : (score >= 65 ? 'High Bias' : score >= 30 ? 'Moderate Bias' : 'Low Bias')
+  const filled = (animated / 100) * circumference
+  const gap    = circumference - filled
+  const color  = score < 20 ? '#4ade80' : score < 45 ? '#fbbf24' : score < 70 ? '#f97316' : '#f87171'
+  const label  = level || (score < 20 ? 'Low' : score < 45 ? 'Moderate' : score < 70 ? 'High' : 'Critical')
 
   return (
     <div className={styles.wrapper}>
-      <div className={styles.gaugeContainer}>
-        <svg viewBox="0 0 120 120" className={styles.svg}>
-          <circle cx="60" cy="60" r={radius + 6} fill="none" stroke={color} strokeWidth="1" opacity="0.15" />
-          <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--border)" strokeWidth="10" />
-          <circle
-            cx="60" cy="60" r={radius}
-            fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
-            strokeDasharray={`${filled} ${gap}`}
-            transform="rotate(-90 60 60)"
-          />
-          <text x="60" y="53" textAnchor="middle" className={styles.scoreText} fill={color}>
-            {Math.round(animatedScore)}
+      <svg viewBox="0 0 120 120" className={styles.svg}>
+        <circle cx="60" cy="60" r={radius + 8} fill="none" stroke={color} strokeWidth="0.5" opacity="0.15"/>
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--border)" strokeWidth="9"/>
+        <circle
+          cx="60" cy="60" r={radius}
+          fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
+          strokeDasharray={`${filled} ${gap}`}
+          transform="rotate(-90 60 60)"
+          style={{ filter: `drop-shadow(0 0 8px ${color}88)`, transition: 'stroke-dasharray 0.05s' }}
+        />
+        <text x="60" y="56" textAnchor="middle" className={styles.scoreText} fill={color}>
+          {Math.round(animated)}
+        </text>
+        <text x="60" y="68" textAnchor="middle" className={styles.subText} fill="var(--text-muted)">
+          / 100
+        </text>
+        {confidence !== undefined && (
+          <text x="60" y="79" textAnchor="middle" className={styles.confText} fill="var(--text-muted)">
+            {Math.round(confidence)}% conf.
           </text>
-          <text x="60" y="66" textAnchor="middle" className={styles.labelText} fill="var(--text-muted)">
-            / 100
-          </text>
-          {confidence !== undefined && (
-            <text x="60" y="77" textAnchor="middle" className={styles.confText} fill="var(--text-muted)">
-              {Math.round(confidence)}% confident
-            </text>
-          )}
-        </svg>
-      </div>
-      <div className={styles.levelBadge} style={{ background: `${color}22`, color, borderColor: `${color}44` }}>
-        {badgeLabel}
+        )}
+      </svg>
+      <div className={styles.badge} style={{ background: `${color}20`, color, borderColor: `${color}50` }}>
+        {label} Bias
       </div>
     </div>
   )

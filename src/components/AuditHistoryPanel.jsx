@@ -13,7 +13,7 @@ export default function AuditHistoryPanel({ onOpen, onClose }) {
   }
   function handleClear() { clearAuditHistory(); setHistory([]) }
 
-  const levelColor = { Low: '#34d399', Moderate: '#fbbf24', High: '#f87171', Critical: '#ef4444' }
+  const levelColor = { Low: '#34d399', Moderate: '#fbbf24', High: '#f97316', Critical: '#f87171' }
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -21,18 +21,12 @@ export default function AuditHistoryPanel({ onOpen, onClose }) {
         <div className={styles.header}>
           <h3>Audit History</h3>
           <div className={styles.headerActions}>
-            {history.length > 0 && (
-              <button className={styles.clearBtn} onClick={handleClear}>Clear all</button>
-            )}
+            {history.length > 0 && <button className={styles.clearBtn} onClick={handleClear}>Clear all</button>}
             <button className={styles.closeBtn} onClick={onClose}>✕</button>
           </div>
         </div>
-
         {history.length === 0 ? (
-          <div className={styles.empty}>
-            <span>📊</span>
-            <p>No audits yet. Run your first one!</p>
-          </div>
+          <div className={styles.empty}><span>📊</span><p>No audits yet.</p></div>
         ) : (
           <div className={styles.list}>
             {history.map(entry => {
@@ -50,18 +44,17 @@ export default function AuditHistoryPanel({ onOpen, onClose }) {
                     <div className={styles.itemInfo}>
                       <p className={styles.itemPrompt}>
                         {entry.description
-                          ? entry.description.slice(0, 60) + (entry.description.length > 60 ? '…' : '')
+                          ? entry.description.slice(0, 55) + (entry.description.length > 55 ? '…' : '')
                           : `${r.sensitive_column || '?'} → ${r.target_column || '?'}`}
                       </p>
                       <span className={styles.itemMeta}>
-                        {level} Bias · {r.total_rows} rows ·{' '}
+                        {level} · {r.total_rows} rows · {r.sensitive_column || '?'} ·{' '}
                         {new Date(entry.timestamp).toLocaleDateString()}{' '}
                         {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                   </div>
-                  <button className={styles.deleteBtn}
-                    onClick={e => handleDelete(entry.id, e)} title="Delete">✕</button>
+                  <button className={styles.deleteBtn} onClick={e => handleDelete(entry.id, e)}>✕</button>
                 </div>
               )
             })}

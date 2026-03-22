@@ -197,20 +197,20 @@ export default function Home() {
                   {columns.length > 0 && (
                     <div className={styles.colSelectors}>
                       <div className={styles.colSel}>
-                        <label className={styles.colLabel}>Target column (what to predict)</label>
+                        <label className={styles.colLabel}>Outcome column (what to measure fairness on)</label>
                         <select className={styles.colSelect} value={targetCol}
                           onChange={e => setTargetCol(e.target.value)}
                           disabled={!csvFile || !description.trim()}>
-                          <option value="">— Auto-detect —</option>
+                          <option value="">— Auto-detect from description —</option>
                           {columns.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </div>
                       <div className={styles.colSel}>
-                        <label className={styles.colLabel}>Sensitive attribute (e.g. Gender, Race)</label>
+                        <label className={styles.colLabel}>Protected attribute (e.g. Gender, Region, Race)</label>
                         <select className={styles.colSelect} value={sensitiveCol}
                           onChange={e => setSensitiveCol(e.target.value)}
                           disabled={!csvFile || !description.trim()}>
-                          <option value="">— Auto-detect —</option>
+                          <option value="">— Auto-detect from description —</option>
                           {columns.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </div>
