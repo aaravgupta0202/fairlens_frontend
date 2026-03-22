@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import HighlightedText from './HighlightedText'
+import Icon from './Icon'
 import styles from './RewritePanel.module.css'
 
 export default function RewritePanel({ original, unbiased, flaggedPhrases }) {
@@ -18,7 +19,7 @@ export default function RewritePanel({ original, unbiased, flaggedPhrases }) {
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <span className={styles.badge} style={{ background: 'rgba(248,113,113,0.15)', color: 'var(--red)' }}>
-            ✗ Original Response
+            <Icon name='close' size={13}/> Original Response
           </span>
           {flaggedPhrases?.length > 0 && (
             <span className={styles.flagCount}>
@@ -36,10 +37,10 @@ export default function RewritePanel({ original, unbiased, flaggedPhrases }) {
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <span className={styles.badge} style={{ background: 'rgba(52,211,153,0.15)', color: 'var(--green)' }}>
-            ✓ Unbiased Rewrite
+            <Icon name='check' size={13}/> Unbiased Rewrite
           </span>
           <button className={styles.copyBtn} onClick={copyUnbiased}>
-            {copied ? '✓ Copied' : '📋 Copy'}
+            <>{copied ? <Icon name='check' size={12}/> : <Icon name='copy' size={12}/>} {copied ? 'Copied' : 'Copy'}</>
           </button>
         </div>
         <p className={styles.text}>{unbiased}</p>

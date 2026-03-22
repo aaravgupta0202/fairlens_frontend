@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getHistory, clearHistory, deleteHistoryItem } from '../api/history'
+import Icon from './Icon'
 import styles from './HistoryPanel.module.css'
 
 export default function HistoryPanel({ onClose }) {
@@ -35,13 +36,13 @@ export default function HistoryPanel({ onClose }) {
             {history.length > 0 && (
               <button className={styles.clearBtn} onClick={handleClear}>Clear all</button>
             )}
-            <button className={styles.closeBtn} onClick={onClose}>✕</button>
+            <button className={styles.closeBtn} onClick={onClose} aria-label='Close'><Icon name='close' size={14}/></button>
           </div>
         </div>
 
         {history.length === 0 ? (
           <div className={styles.empty}>
-            <span>💬</span>
+            <Icon name='chat' size={14}/>
             <p>No text analyses yet. Run your first one!</p>
           </div>
         ) : (
@@ -54,7 +55,7 @@ export default function HistoryPanel({ onClose }) {
                     <div className={styles.scoreBadge} style={{
                       background: `${color}22`, color, borderColor: `${color}44`
                     }}>
-                      <span className={styles.scoreIcon}>💬</span>
+                      <Icon name='chat' size={14}/>
                       <span>{Math.round(entry.result?.bias_score ?? 0)}</span>
                     </div>
                     <div className={styles.itemInfo}>
@@ -67,7 +68,7 @@ export default function HistoryPanel({ onClose }) {
                     </div>
                   </div>
                   <button className={styles.deleteBtn}
-                    onClick={e => handleDelete(entry.id, e)} title="Delete">✕</button>
+                    onClick={e => handleDelete(entry.id, e)} title='Delete'><Icon name='delete' size={13}/></button>
                 </div>
               )
             })}

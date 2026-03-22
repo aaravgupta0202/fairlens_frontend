@@ -9,15 +9,20 @@ import {
 import { sendChatMessage } from '../api/audit'
 import { exportAuditToPdf } from '../api/exportPdf'
 import BiasGauge from '../components/BiasGauge'
-import ThemeToggle from '../components/ThemeToggle'
+import PageHeader from '../components/PageHeader'
+import Icon from '../components/Icon'
 import styles from './AuditResultsPage.module.css'
 
 const COLORS = ['var(--primary)', 'var(--accent)', '#60a5fa', '#a78bfa', '#f472b6', '#34d399']
+const tt = {
+  contentStyle: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 },
+  labelStyle:   { color: 'var(--text)' },
+}
 
 /* ── Metric Card ─────────────────────────────────────────────────────────── */
 function MetricCard({ metric }) {
-  const isAbove = metric.threshold_direction === 'above'
-  const pct = isAbove
+  const isAbove  = metric.threshold_direction === 'above'
+  const pct      = isAbove
     ? Math.min((metric.value / (metric.threshold || 1)) * 100, 100)
     : Math.min((metric.value / ((metric.threshold || 1) * 2)) * 100, 100)
   const barColor = metric.flagged ? 'var(--red)' : 'var(--green)'
@@ -26,14 +31,14 @@ function MetricCard({ metric }) {
       <div className={styles.metricHeader}>
         <span className={styles.metricName}>{metric.name}</span>
         <span className={`${styles.badge} ${metric.flagged ? styles.badgeRed : styles.badgeGreen}`}>
-          {metric.flagged ? '⚠ Flagged' : '✓ OK'}
+          {metric.flagged ? 'Flagged' : 'OK'}
         </span>
       </div>
       <div className={styles.metricValue}>{metric.value.toFixed(4)}</div>
       <div className={styles.metricBarTrack}>
-        <div className={styles.metricBarFill} style={{ width: `${pct}%`, background: barColor }}/>
+        <div className={styles.metricBarFill} style={{ width: `${pct}%`, background: barColor }} />
         {metric.threshold != null && (
-          <div className={styles.metricThresholdLine} style={{ left: isAbove ? '80%' : '50%' }}/>
+          <div className={styles.metricThresholdLine} style={{ left: isAbove ? '80%' : '50%' }} />
         )}
       </div>
       {metric.threshold != null && (
@@ -49,21 +54,23 @@ function MetricCard({ metric }) {
 /* ── Simulation Card ──────────────────────────────────────────────────────── */
 function SimulationCard({ simulation }) {
   const improvement = simulation.improvement || 0
+  const before = simulation.before_score || 0
+  const after  = simulation.after_score  || 0
   return (
     <div className={styles.simCard}>
       <div className={styles.simHeader}>
-        <span className={styles.simTitle}>🔧 Bias Fix Simulation</span>
+        <span className={styles.simTitle}><Icon name='simulation' size={15}/> Bias Fix Simulation</span>
         <span className={styles.simBadge}>↓ {improvement} pts</span>
       </div>
       {simulation.strategy && <p className={styles.simStrategy}>{simulation.strategy}</p>}
       <div className={styles.simScores}>
         <div className={styles.simScore}>
-          <div className={styles.simScoreNum} style={{ color: 'var(--red)' }}>{simulation.before_score}</div>
+          <div className={styles.simScoreNum} style={{ color: 'var(--red)' }}>{before}</div>
           <div className={styles.simScoreLabel}>Before</div>
         </div>
         <div className={styles.simArrow}>→</div>
         <div className={styles.simScore}>
-          <div className={styles.simScoreNum} style={{ color: 'var(--green)' }}>{simulation.after_score}</div>
+          <div className={styles.simScoreNum} style={{ color: 'var(--green)' }}>{after}</div>
           <div className={styles.simScoreLabel}>After</div>
         </div>
         <div className={styles.simDpd}>
@@ -81,10 +88,10 @@ function SimulationCard({ simulation }) {
 function BiasOriginCard({ biasOrigin, rootCauses }) {
   return (
     <div className={styles.originCard}>
-      <h3 className={styles.cardTitle}>⚡ Bias Origin</h3>
+      <h3 className={styles.cardTitle}><Icon name='origin' size={15}/> Bias Origin</h3>
       <div className={styles.originGrid}>
         <div className={styles.originItem}>
-          <span className={styles.originLabel}>Most Affected Group</span>
+          <span className={styles.originLabel}>Most Affected</span>
           <span className={styles.originValue} style={{ color: 'var(--red)' }}>
             {biasOrigin.most_affected_group}
           </span>
@@ -105,7 +112,7 @@ function BiasOriginCard({ biasOrigin, rootCauses }) {
           <p className={styles.rcTitle}>Root Causes</p>
           {rootCauses.map((rc, i) => (
             <div key={i} className={styles.rcItem}>
-              <span className={styles.rcDot}/>
+              <span className={styles.rcDot} />
               <p>{rc}</p>
             </div>
           ))}
@@ -119,9 +126,9 @@ function BiasOriginCard({ biasOrigin, rootCauses }) {
 function ChatPanel({ datasetDescription, auditSummary }) {
   const [messages, setMessages] = useState([{
     role: 'assistant',
-    content: "I've completed the fairness audit. Ask me anything — how to reduce bias, what a metric means, who is most affected, or what to do next."
+    content: "I've completed the fairness audit. Ask me anything — how to reduce bias, what a metric means, who is most affected, or what to do next.",
   }])
-  const [input, setInput] = useState('')
+  const [input, setInput]   = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
   const suggestions = ['How to reduce bias?', 'What does DPD mean?', 'Who is most affected?', 'What should I fix first?']
@@ -151,7 +158,7 @@ function ChatPanel({ datasetDescription, auditSummary }) {
     <div className={styles.chatPanel}>
       <div className={styles.chatHeader}>
         <div className={styles.chatHeaderLeft}>
-          <div className={styles.chatDot}/>
+          <div className={styles.chatDot} />
           <span>Ask FairLens AI</span>
         </div>
       </div>
@@ -165,10 +172,10 @@ function ChatPanel({ datasetDescription, auditSummary }) {
         {loading && (
           <div className={`${styles.chatBubble} ${styles.chatAssistant}`}>
             <div className={styles.chatAvatar}>FL</div>
-            <div className={styles.chatTyping}><span/><span/><span/></div>
+            <div className={styles.chatTyping}><span /><span /><span /></div>
           </div>
         )}
-        <div ref={bottomRef}/>
+        <div ref={bottomRef} />
       </div>
       <div className={styles.chatSuggestions}>
         {suggestions.map(s => (
@@ -176,10 +183,14 @@ function ChatPanel({ datasetDescription, auditSummary }) {
         ))}
       </div>
       <div className={styles.chatInputRow}>
-        <input className={styles.chatInput} value={input}
+        <input
+          className={styles.chatInput}
+          value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSend()}
-          placeholder="Ask about the audit findings…" disabled={loading}/>
+          placeholder="Ask about the audit findings…"
+          disabled={loading}
+        />
         <button className={styles.chatSend} onClick={handleSend} disabled={loading || !input.trim()}>
           {loading ? '…' : '↑'}
         </button>
@@ -190,8 +201,8 @@ function ChatPanel({ datasetDescription, auditSummary }) {
 
 /* ── Main Page ────────────────────────────────────────────────────────────── */
 export default function AuditResultsPage() {
-  const location     = useLocation()
-  const navigate     = useNavigate()
+  const location       = useLocation()
+  const navigate       = useNavigate()
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab]   = useState('overview')
   const [shareState, setShareState] = useState('idle')
@@ -199,7 +210,7 @@ export default function AuditResultsPage() {
 
   let result, datasetDescription
   if (location.state?.result) {
-    result = location.state.result
+    result             = location.state.result
     datasetDescription = location.state.description || ''
   } else if (searchParams.get('shared')) {
     const decoded = decodeShareData(searchParams.get('shared'))
@@ -218,12 +229,12 @@ export default function AuditResultsPage() {
   if (!result) return (
     <div className={styles.noResult}>
       <h2>No audit result found</h2>
-      <button className={styles.backBtn} onClick={() => navigate('/')}>← Back to Home</button>
+      <button className={styles.backBtnStandalone} onClick={() => navigate('/')}>← Back to Home</button>
     </div>
   )
 
   const {
-    bias_score, bias_level, risk_label,
+    bias_score, bias_level,
     total_rows, columns, target_column, sensitive_column,
     positive_class, primary_numeric_column, category_column,
     metrics, group_stats, category_analysis, root_causes,
@@ -271,53 +282,37 @@ export default function AuditResultsPage() {
     finally { setExporting(false) }
   }
 
-  // Tabs: insights and ask AI are adjacent
-  const tabs = ['overview', 'metrics', 'groups', 'categories', 'insights', 'ask']
+  const tabs      = ['overview', 'metrics', 'groups', 'categories', 'insights', 'ask']
   const tabLabels = {
-    overview:   '🔍 Overview',
-    metrics:    '📐 Metrics',
-    groups:     '👥 Groups',
-    categories: category_column ? `📂 ${category_column}` : '📂 Categories',
-    insights:   '💡 Insights',
-    ask:        '💬 Ask AI',
-  }
-
-  const tt = {
-    contentStyle: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 },
-    labelStyle: { color: 'var(--text)' },
+    overview:   'Overview',
+    metrics:    'Metrics',
+    groups:     'Groups',
+    categories: category_column || 'Categories',
+    insights:   'Insights',
+    ask:        'Ask AI',
   }
 
   return (
     <div className={styles.page}>
 
-      {/* ── Header — frosted glass ── */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={() => navigate('/')}>← Back</button>
-          <img src="/fairlens_logo.png" alt="FairLens" className={styles.logoImg}/>
-        </div>
-        <div className={styles.headerActions}>
-          <ThemeToggle/>
-          <button className={styles.actionBtn} onClick={handleShare}>
-            {shareState === 'copied' ? '✓ Copied!' : '🔗 Share'}
-          </button>
-          <button className={styles.actionBtn} onClick={handleExportPdf} disabled={exporting}>
-            {exporting ? 'Exporting…' : '📄 PDF'}
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        onBack={() => navigate('/')}
+        actions={[
+          { label: shareState === 'copied' ? 'Copied!' : 'Share', onClick: handleShare, success: shareState === 'copied' },
+          { label: exporting ? 'Exporting…' : 'PDF', onClick: handleExportPdf, disabled: exporting },
+        ]}
+      />
 
       <div className={styles.mainContent}>
 
-        {/* ── Hero ── */}
+        {/* Hero */}
         <div className={styles.hero}>
           <div className={styles.heroGauge}>
-            <BiasGauge score={bias_score} level={bias_level}/>
+            <BiasGauge score={bias_score} level={bias_level} />
           </div>
-
           <div className={styles.heroRight}>
             <div className={styles.riskBadge}
-              style={{ background: `${biasColor}20`, color: biasColor, borderColor: `${biasColor}40` }}>
+              style={{ background: `${biasColor}1e`, color: biasColor, borderColor: `${biasColor}44` }}>
               {bias_level} Bias
             </div>
             <h1 className={styles.heroTitle}>Fairness Audit Report</h1>
@@ -334,52 +329,51 @@ export default function AuditResultsPage() {
                 </span>
                 <span className={styles.heroStatLabel}>Flagged</span>
               </div>
-              <div className={styles.heroStatDiv}/>
+              <div className={styles.heroStatDiv} />
               <div className={styles.heroStat}>
                 <span className={styles.heroStatNum}>{group_stats.length}</span>
                 <span className={styles.heroStatLabel}>Groups</span>
               </div>
               {simulation && <>
-                <div className={styles.heroStatDiv}/>
+                <div className={styles.heroStatDiv} />
                 <div className={styles.heroStat}>
                   <span className={styles.heroStatNum} style={{ color: 'var(--green)' }}>−{simulation.improvement}</span>
                   <span className={styles.heroStatLabel}>Fix Potential</span>
                 </div>
               </>}
               {category_analysis?.length > 0 && <>
-                <div className={styles.heroStatDiv}/>
+                <div className={styles.heroStatDiv} />
                 <div className={styles.heroStat}>
                   <span className={styles.heroStatNum}>{category_analysis.filter(c => c.flagged).length}</span>
-                  <span className={styles.heroStatLabel}>{category_column ? `${category_column} Flagged` : 'Sub-cats Flagged'}</span>
+                  <span className={styles.heroStatLabel}>{category_column ? `${category_column} Flagged` : 'Sub-cats'}</span>
                 </div>
               </>}
             </div>
           </div>
         </div>
 
-        {/* ── Tabs ── */}
+        {/* Tabs */}
         <div className={styles.tabs}>
           {tabs.map(t => (
             <button key={t}
               className={`${styles.tab} ${activeTab === t ? styles.tabActive : ''} ${t === 'ask' ? styles.tabAsk : ''}`}
               onClick={() => setActiveTab(t)}>
-              {tabLabels[t]}
+              <>{t === 'overview' && <Icon name='overview' size={13}/>}{t === 'metrics' && <Icon name='metrics' size={13}/>}{t === 'groups' && <Icon name='groups' size={13}/>}{t === 'categories' && <Icon name='categories' size={13}/>}{t === 'insights' && <Icon name='insights' size={13}/>}{t === 'ask' && <Icon name='chat' size={13}/>} {tabLabels[t]}</>
             </button>
           ))}
         </div>
 
-        {/* ── Overview ── */}
+        {/* Overview */}
         {activeTab === 'overview' && (
           <div className={styles.tabContent}>
             {summary && (
               <div className={styles.card}>
-                <h3 className={styles.cardTitle}>📋 Summary</h3>
+                <h3 className={styles.cardTitle}><Icon name='summary' size={15}/> Summary</h3>
                 <div className={styles.summaryText}>
                   {summary.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
                 </div>
               </div>
             )}
-
             <div className={styles.quickMetrics}>
               {metrics.slice(0, 4).map(m => (
                 <div key={m.key} className={`${styles.quickMetric} ${m.flagged ? styles.qmFlagged : ''}`}>
@@ -387,27 +381,25 @@ export default function AuditResultsPage() {
                   <div className={styles.qmVal} style={{ color: m.flagged ? 'var(--red)' : 'var(--green)' }}>
                     {m.value.toFixed(3)}
                   </div>
-                  <div className={styles.qmStatus}>{m.flagged ? '⚠ Flagged' : '✓ OK'}</div>
+                  <div className={styles.qmStatus}>{m.flagged ? 'Flagged' : 'OK'}</div>
                 </div>
               ))}
             </div>
-
             <div className={styles.twoCol}>
-              {bias_origin && <BiasOriginCard biasOrigin={bias_origin} rootCauses={root_causes}/>}
-              {simulation  && <SimulationCard simulation={simulation}/>}
+              {bias_origin && <BiasOriginCard biasOrigin={bias_origin} rootCauses={root_causes} />}
+              {simulation  && <SimulationCard simulation={simulation} />}
             </div>
-
             {groupChartData.length > 0 && (
               <div className={styles.card}>
-                <h3 className={styles.cardTitle}>👥 {positiveLabel} Rate by {sensitive_column || 'Group'}</h3>
+                <h3 className={styles.cardTitle}><Icon name='chart' size={15}/> {positiveLabel} Rate by {sensitive_column || 'Group'}</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={groupChartData} barCategoryGap="30%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
-                    <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} unit="%" domain={[0, 100]}/>
-                    <Tooltip {...tt}/>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} unit="%" domain={[0, 100]} />
+                    <Tooltip {...tt} />
                     <Bar dataKey={positiveLabel + ' Rate'} radius={[6, 6, 0, 0]}>
-                      {groupChartData.map((_, idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]}/>)}
+                      {groupChartData.map((_, idx) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -416,20 +408,20 @@ export default function AuditResultsPage() {
           </div>
         )}
 
-        {/* ── Metrics ── */}
+        {/* Metrics */}
         {activeTab === 'metrics' && (
           <div className={styles.tabContent}>
             <div className={styles.metricsGrid}>
-              {metrics.map(m => <MetricCard key={m.key} metric={m}/>)}
+              {metrics.map(m => <MetricCard key={m.key} metric={m} />)}
             </div>
           </div>
         )}
 
-        {/* ── Groups ── */}
+        {/* Groups */}
         {activeTab === 'groups' && (
           <div className={styles.tabContent}>
             <div className={styles.card}>
-              <h3 className={styles.cardTitle}>📊 Group Statistics — {sensitive_column}</h3>
+              <h3 className={styles.cardTitle}><Icon name='chart' size={15}/> Group Statistics — {sensitive_column}</h3>
               <div className={styles.tableWrap}>
                 <table className={styles.table}>
                   <thead>
@@ -469,15 +461,15 @@ export default function AuditResultsPage() {
 
             {eqOddsData.length > 0 && (
               <div className={styles.card}>
-                <h3 className={styles.cardTitle}>⚖️ Equalized Odds — TPR vs FPR</h3>
+                <h3 className={styles.cardTitle}><Icon name='equalizer' size={15}/> Equalized Odds — TPR vs FPR</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={eqOddsData} barCategoryGap="25%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
-                    <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
-                    <YAxis unit="%" domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
-                    <Tooltip {...tt}/><Legend/>
-                    <Bar dataKey="TPR" fill="var(--green)" radius={[4, 4, 0, 0]}/>
-                    <Bar dataKey="FPR" fill="var(--red)"   radius={[4, 4, 0, 0]}/>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                    <YAxis unit="%" domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                    <Tooltip {...tt} /><Legend />
+                    <Bar dataKey="TPR" fill="var(--green)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="FPR" fill="var(--red)"   radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -486,29 +478,29 @@ export default function AuditResultsPage() {
             {radarData.length > 0 && (
               <>
                 <div className={styles.card}>
-                  <h3 className={styles.cardTitle}>🎯 Avg {primary_numeric_column} by Group × {category_column}</h3>
+                  <h3 className={styles.cardTitle}><Icon name='target' size={15}/> Avg {primary_numeric_column} by Group × {category_column}</h3>
                   <ResponsiveContainer width="100%" height={280}>
                     <RadarChart data={radarData}>
-                      <PolarGrid stroke="var(--border)"/>
-                      <PolarAngleAxis dataKey="category" tick={{ fill: 'var(--text-muted)', fontSize: 11 }}/>
+                      <PolarGrid stroke="var(--border)" />
+                      <PolarAngleAxis dataKey="category" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                       {group_stats.map((g, i) => (
                         <Radar key={g.group} name={g.group} dataKey={g.group}
-                          stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.15}/>
+                          stroke={COLORS[i % COLORS.length]} fill={COLORS[i % COLORS.length]} fillOpacity={0.15} />
                       ))}
-                      <Tooltip {...tt}/><Legend/>
+                      <Tooltip {...tt} /><Legend />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>
                 <div className={styles.card}>
-                  <h3 className={styles.cardTitle}>📈 Avg {primary_numeric_column} by {category_column} & Group</h3>
+                  <h3 className={styles.cardTitle}><Icon name='chartLine' size={15}/> Avg {primary_numeric_column} by {category_column} & Group</h3>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={radarData} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
-                      <XAxis dataKey="category" tick={{ fill: 'var(--text-muted)', fontSize: 11 }}/>
-                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
-                      <Tooltip {...tt}/><Legend/>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="category" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                      <Tooltip {...tt} /><Legend />
                       {group_stats.map((g, i) => (
-                        <Bar key={g.group} dataKey={g.group} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]}/>
+                        <Bar key={g.group} dataKey={g.group} fill={COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
                       ))}
                     </BarChart>
                   </ResponsiveContainer>
@@ -518,13 +510,13 @@ export default function AuditResultsPage() {
           </div>
         )}
 
-        {/* ── Categories ── */}
+        {/* Categories */}
         {activeTab === 'categories' && (
           <div className={styles.tabContent}>
             {category_analysis && category_analysis.length > 0 ? (
               <>
                 <div className={styles.card}>
-                  <h3 className={styles.cardTitle}>📂 {category_column} Analysis</h3>
+                  <h3 className={styles.cardTitle}><Icon name='categories' size={15}/> {category_column} Analysis</h3>
                   <div className={styles.tableWrap}>
                     <table className={styles.table}>
                       <thead>
@@ -545,7 +537,7 @@ export default function AuditResultsPage() {
                             </td>
                             <td>
                               <span className={`${styles.badge} ${ca.flagged ? styles.badgeRed : styles.badgeGreen}`}>
-                                {ca.flagged ? '⚠ Biased' : '✓ Fair'}
+                                {ca.flagged ? 'Biased' : 'Fair'}
                               </span>
                             </td>
                             <td className={styles.biasNote}>{ca.bias_note || '—'}</td>
@@ -555,21 +547,20 @@ export default function AuditResultsPage() {
                     </table>
                   </div>
                 </div>
-
                 <div className={styles.card}>
-                  <h3 className={styles.cardTitle}>📊 {positiveLabel} Rate by {category_column}</h3>
+                  <h3 className={styles.cardTitle}><Icon name='chart' size={15}/> {positiveLabel} Rate by {category_column}</h3>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={category_analysis.map(ca => ({
                       name: ca.category_value,
                       Rate: Math.round(ca.selection_rate * 100),
                     }))} barCategoryGap="30%">
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
-                      <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
-                      <YAxis unit="%" domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
-                      <Tooltip {...tt}/>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                      <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                      <YAxis unit="%" domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }} />
+                      <Tooltip {...tt} />
                       <Bar dataKey="Rate" radius={[6, 6, 0, 0]}>
                         {category_analysis.map((ca, i) => (
-                          <Cell key={i} fill={ca.flagged ? 'var(--red)' : COLORS[i % COLORS.length]} fillOpacity={0.85}/>
+                          <Cell key={i} fill={ca.flagged ? 'var(--red)' : COLORS[i % COLORS.length]} fillOpacity={0.85} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -585,12 +576,12 @@ export default function AuditResultsPage() {
           </div>
         )}
 
-        {/* ── Insights ── */}
+        {/* Insights */}
         {activeTab === 'insights' && (
           <div className={styles.tabContent}>
             {key_findings?.length > 0 && (
               <div className={styles.card}>
-                <h3 className={styles.cardTitle}>🔑 Key Findings</h3>
+                <h3 className={styles.cardTitle}><Icon name='findings' size={15}/> Key Findings</h3>
                 <div className={styles.findingsList}>
                   {key_findings.map((f, i) => (
                     <div key={i} className={styles.findingItem}>
@@ -603,7 +594,7 @@ export default function AuditResultsPage() {
             )}
             {recommendations?.length > 0 && (
               <div className={styles.card}>
-                <h3 className={styles.cardTitle}>✅ Recommendations</h3>
+                <h3 className={styles.cardTitle}><Icon name='recommendations' size={15}/> Recommendations</h3>
                 <div className={styles.recsList}>
                   {recommendations.map((r, i) => (
                     <div key={i} className={styles.recItem}>
@@ -614,17 +605,14 @@ export default function AuditResultsPage() {
                 </div>
               </div>
             )}
-            {simulation && <SimulationCard simulation={simulation}/>}
+            {simulation && <SimulationCard simulation={simulation} />}
           </div>
         )}
 
-        {/* ── Ask AI (inline chat, beside insights) ── */}
+        {/* Ask AI */}
         {activeTab === 'ask' && (
           <div className={styles.tabContent}>
-            <ChatPanel
-              datasetDescription={datasetDescription}
-              auditSummary={audit_summary_json}
-            />
+            <ChatPanel datasetDescription={datasetDescription} auditSummary={audit_summary_json} />
           </div>
         )}
 

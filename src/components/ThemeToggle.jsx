@@ -1,10 +1,11 @@
 import { useTheme } from '../hooks/useTheme'
 import styles from './ThemeToggle.module.css'
+import Icon from './Icon'
 
 const OPTIONS = [
-  { value: 'system', icon: '💻', label: 'System' },
-  { value: 'light',  icon: '☀️', label: 'Light'  },
-  { value: 'dark',   icon: '🌙', label: 'Dark'   },
+  { value: 'system', icon: 'monitor', label: 'System' },
+  { value: 'light',  icon: 'sun', label: 'Light'  },
+  { value: 'dark',   icon: 'moon', label: 'Dark'   },
 ]
 
 export default function ThemeToggle() {
@@ -19,7 +20,7 @@ export default function ThemeToggle() {
           onClick={() => setTheme(opt.value)}
           title={opt.label}
         >
-          <span className={styles.icon}>{opt.icon}</span>
+          <span className={styles.icon && <Icon name={styles.icon} size={14}/>}>{opt.icon && <Icon name={opt.icon} size={14}/>}</span>
           <span className={styles.label}>{opt.label}</span>
         </button>
       ))}

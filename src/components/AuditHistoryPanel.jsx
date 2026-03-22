@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import Icon from './Icon'
+import { useState } from 'react' 
 import { getAuditHistory, clearAuditHistory, deleteAuditHistoryItem } from '../api/history'
 import styles from './HistoryPanel.module.css'
 
@@ -22,11 +23,11 @@ export default function AuditHistoryPanel({ onOpen, onClose }) {
           <h3>Audit History</h3>
           <div className={styles.headerActions}>
             {history.length > 0 && <button className={styles.clearBtn} onClick={handleClear}>Clear all</button>}
-            <button className={styles.closeBtn} onClick={onClose}>✕</button>
+            <button className={styles.closeBtn} onClick={onClose} aria-label='Close'><Icon name='close' size={14}/></button>
           </div>
         </div>
         {history.length === 0 ? (
-          <div className={styles.empty}><span>📊</span><p>No audits yet.</p></div>
+          <div className={styles.empty}><Icon name='chart' size={20}/><p>No audits yet.</p></div>
         ) : (
           <div className={styles.list}>
             {history.map(entry => {
@@ -54,7 +55,7 @@ export default function AuditHistoryPanel({ onOpen, onClose }) {
                       </span>
                     </div>
                   </div>
-                  <button className={styles.deleteBtn} onClick={e => handleDelete(entry.id, e)}>✕</button>
+                  <button className={styles.deleteBtn} onClick={e => handleDelete(entry.id, e)}><Icon name='delete' size={13}/></button>
                 </div>
               )
             })}

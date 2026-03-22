@@ -8,6 +8,7 @@ import FairnessComparisonChart from './FairnessComparisonChart'
 import { downloadBase64File } from '../api/audit'
 import { buildShareUrl } from '../api/share'
 import { exportAuditToPdf } from '../api/exportPdf'
+import Icon from './Icon'
 import styles from './AuditResults.module.css'
 
 const STRATEGY_LABELS = {
@@ -74,7 +75,7 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
     else onReset?.()
   }
 
-  const shareLabel = { idle: '🔗 Share', copied: '✓ Copied!', error: 'Failed' }[shareState]
+  const shareLabel = { idle: 'Share', copied: '✓ Copied!', error: 'Failed' }[shareState]
 
   const flaggedCount = Object.values(bias_flags_before || {}).filter(Boolean).length
   const flaggedAfterCount = Object.values(bias_flags_after || {}).filter(Boolean).length
@@ -103,7 +104,7 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
           <button className={`${styles.actionBtn} ${shareState === 'copied' ? styles.actionSuccess : ''}`}
             onClick={handleShare}>{shareLabel}</button>
           <button className={styles.actionBtn} onClick={handleExportPdf} disabled={exporting}>
-            {exporting ? '⏳...' : '📄 PDF'}
+            {exporting ? 'Exporting…' : 'PDF'}
           </button>
           <button className={styles.actionBtn} onClick={() => downloadBase64File(debiased_dataset, 'fairlens_debiased_dataset.csv', 'text/csv')}
             disabled={!debiased_dataset}>⬇ Dataset</button>
@@ -125,10 +126,10 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
         {['overview', 'metrics', 'groups', 'insights'].map(tab => (
           <button key={tab} className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
             onClick={() => setActiveTab(tab)}>
-            {tab === 'overview' && '📊 Overview'}
-            {tab === 'metrics' && '📐 All Metrics'}
-            {tab === 'groups' && '👥 Groups'}
-            {tab === 'insights' && '🤖 AI Insights'}
+            {tab === 'overview' && 'Overview'}
+            {tab === 'metrics' && 'Metrics'}
+            {tab === 'groups' && 'Groups'}
+            {tab === 'insights' && 'Insights'}
           </button>
         ))}
       </div>
@@ -243,7 +244,7 @@ export default function AuditResults({ result, targetColumn, sensitiveColumn, on
         <>
           <div className={styles.messageCard}>
             <div className={styles.messageHeader}>
-              <span>🤖</span>
+              <Icon name='robot' size={16}/>
               <span className={styles.messageLabel}>Gemini 2.5 Flash Audit Report</span>
             </div>
             <p className={styles.messageText}>{message}</p>

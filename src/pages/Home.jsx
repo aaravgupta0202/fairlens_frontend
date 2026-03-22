@@ -8,6 +8,7 @@ import HistoryPanel from '../components/HistoryPanel'
 import AuditHistoryPanel from '../components/AuditHistoryPanel'
 import TrendChart from '../components/TrendChart'
 import ThemeToggle from '../components/ThemeToggle'
+import Icon from '../components/Icon'
 import styles from './Home.module.css'
 
 export default function Home() {
@@ -103,11 +104,11 @@ export default function Home() {
           <ThemeToggle />
           {mode === 'dataset' ? (
             <button className={styles.historyBtn} onClick={() => setShowAuditHistory(true)}>
-              📊 History {auditHistoryCount > 0 && <span className={styles.historyBadge}>{auditHistoryCount}</span>}
+              <Icon name='chart' size={14}/> History {auditHistoryCount > 0 && <span className={styles.historyBadge}>{auditHistoryCount}</span>}
             </button>
           ) : (
             <button className={styles.historyBtn} onClick={() => setShowTextHistory(true)}>
-              📋 History {textHistoryCount > 0 && <span className={styles.historyBadge}>{textHistoryCount}</span>}
+              <Icon name='history' size={14}/> History {textHistoryCount > 0 && <span className={styles.historyBadge}>{textHistoryCount}</span>}
             </button>
           )}
         </div>
@@ -119,11 +120,11 @@ export default function Home() {
         <div className={styles.modeToggle}>
           <button className={`${styles.modeBtn} ${mode === 'dataset' ? styles.modeBtnActive : ''}`}
             onClick={() => setMode('dataset')}>
-            <span>📊</span> Dataset Fairness Audit
+            <Icon name='chart' size={16}/> Dataset Fairness Audit
           </button>
           <button className={`${styles.modeBtn} ${mode === 'text' ? styles.modeBtnActive : ''}`}
             onClick={() => setMode('text')}>
-            <span>💬</span> Text Bias Analysis
+            <Icon name='chat' size={16}/> Text Bias Analysis
           </button>
         </div>
 
@@ -236,7 +237,7 @@ export default function Home() {
               disabled={auditLoading || !canRunAudit}>
               {auditLoading
                 ? <><span className={styles.spinner} />Analysing with Gemini 2.5 Flash...</>
-                : '📊 Run Fairness Audit'}
+                : 'Run Fairness Audit'}
             </button>
           </div>
         )}
@@ -274,7 +275,7 @@ export default function Home() {
               </div>
               {textError && <p className={styles.error}>{textError}</p>}
               <button className={styles.analyseBtn} onClick={handleAnalyse} disabled={textLoading}>
-                {textLoading ? <><span className={styles.spinner} />Analysing with Gemini 2.5 Flash...</> : '🔍 Analyse for Bias'}
+                {textLoading ? <><Icon name='spinner' size={14} style={{animation:'spin 1s linear infinite'}}/> Analysing with Gemini 2.5 Flash...</> : <><Icon name='analyse' size={14}/> Analyse for Bias</>}
               </button>
             </div>
           </>
@@ -285,18 +286,18 @@ export default function Home() {
           <h3>How FairLens works</h3>
           <div className={styles.steps}>
             {(mode === 'dataset' ? [
-              { icon: '📁', title: 'Upload', desc: 'Upload any CSV dataset' },
-              { icon: '✍️', title: 'Describe', desc: 'Explain your dataset in plain English' },
-              { icon: '🤖', title: 'Analyse', desc: 'Gemini reads stats and detects bias' },
-              { icon: '📊', title: 'Report', desc: 'Full report with charts + chat' },
+              { icon: 'upload', title: 'Upload', desc: 'Upload any CSV dataset' },
+              { icon: 'describe', title: 'Describe', desc: 'Explain your dataset in plain English' },
+              { icon: 'robot', title: 'Analyse', desc: 'Gemini reads stats and detects bias' },
+              { icon: 'chart', title: 'Report', desc: 'Full report with charts + chat' },
             ] : [
-              { icon: '📋', title: 'Paste', desc: 'Enter any AI prompt and response' },
-              { icon: '🤖', title: 'Analyse', desc: 'Gemini 2.5 Flash scans for bias' },
-              { icon: '📊', title: 'Score', desc: 'Bias score across 6 dimensions' },
-              { icon: '✅', title: 'Fix', desc: 'Unbiased rewrite instantly' },
+              { icon: 'text', title: 'Paste', desc: 'Enter any AI prompt and response' },
+              { icon: 'robot', title: 'Analyse', desc: 'Gemini 2.5 Flash scans for bias' },
+              { icon: 'metrics', title: 'Score', desc: 'Bias score across 6 dimensions' },
+              { icon: 'fix', title: 'Fix', desc: 'Unbiased rewrite instantly' },
             ]).map(s => (
               <div key={s.title} className={styles.stepCard}>
-                <div className={styles.stepCardIcon}>{s.icon}</div>
+                <div className={styles.stepCardIcon}><Icon name={s.icon} size={20}/></div>
                 <strong>{s.title}</strong>
                 <p>{s.desc}</p>
               </div>

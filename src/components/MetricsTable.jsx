@@ -63,7 +63,7 @@ export default function MetricsTable({ metricsBefore, metricsAfter, flagsBefore,
                   </td>
                   <td>
                     <span className={`${styles.badge} ${flagBefore ? styles.badgeBad : styles.badgeGood}`}>
-                      {flagBefore ? '⚠ Bias' : '✓ OK'}
+                      {flagBefore ? 'Bias' : 'OK'}
                     </span>
                   </td>
                   {metricsAfter && (
@@ -75,7 +75,7 @@ export default function MetricsTable({ metricsBefore, metricsAfter, flagsBefore,
                   {metricsAfter && (
                     <td>
                       <span className={`${styles.badge} ${flagAfter ? styles.badgeBad : styles.badgeGood}`}>
-                        {flagAfter ? '⚠ Bias' : '✓ OK'}
+                        {flagAfter ? 'Bias' : 'OK'}
                       </span>
                     </td>
                   )}

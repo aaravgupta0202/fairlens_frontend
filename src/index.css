@@ -133,3 +133,17 @@ textarea, input, select { font-family: var(--font); }
 
 /* ── Transitions ── */
 * { transition: border-color 0.2s, background-color 0.2s, color 0.2s; }
+
+/* ── Icon system ── */
+.fl-icon {
+  color: var(--primary);
+}
+[data-theme="light"] .fl-icon {
+  color: var(--primary-dark);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.fl-icon svg { display: block; }

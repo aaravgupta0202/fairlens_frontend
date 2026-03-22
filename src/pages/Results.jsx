@@ -6,9 +6,10 @@ import ExplanationPanel from '../components/ExplanationPanel'
 import RewritePanel from '../components/RewritePanel'
 import HistoryPanel from '../components/HistoryPanel'
 import TrendChart from '../components/TrendChart'
-import ThemeToggle from '../components/ThemeToggle'
+import PageHeader from '../components/PageHeader'
 import { buildShareUrl, decodeShareData } from '../api/share'
 import { exportToPdf } from '../api/exportPdf'
+import Icon from '../components/Icon'
 import styles from './Results.module.css'
 
 export default function Results() {
@@ -46,34 +47,24 @@ export default function Results() {
     finally { setExporting(false) }
   }
 
-  const shareLabel = { idle: '🔗 Share', copied: '✓ Copied!', error: 'Failed' }[shareState]
+  const shareLabel = { idle: 'Share', copied: 'Copied!', error: 'Failed' }[shareState]
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={() => navigate('/')}>← Back</button>
-          <div className={styles.logoArea}>
-            <img src="/fairlens_logo.png" alt="FairLens" className={styles.logoImg} />
-            <span className={styles.logoText}></span>
-          </div>
-        </div>
-        <div className={styles.headerActions}>
-          <ThemeToggle />
-          <button className={styles.actionBtn} onClick={() => setShowHistory(true)}>📋 History</button>
-          <button className={`${styles.actionBtn} ${shareState === 'copied' ? styles.actionSuccess : ''}`}
-            onClick={handleShare}>{shareLabel}</button>
-          <button className={styles.actionBtn} onClick={handleExportPdf} disabled={exporting}>
-            {exporting ? '⏳...' : '📄 PDF'}
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        onBack={() => navigate('/')}
+        actions={[
+          { label: 'History', onClick: () => setShowHistory(true) },
+          { label: shareLabel, onClick: handleShare, success: shareState === 'copied' },
+          { label: exporting ? 'Exporting…' : 'PDF', onClick: handleExportPdf, disabled: exporting },
+        ]}
+      />
 
       <main className={styles.main}>
         <div className={`${styles.banner} ${styles[`banner${result.bias_level}`]}`}>
           {result.bias_level === 'Low' && '✓ Low bias detected. This response appears mostly fair.'}
-          {result.bias_level === 'Moderate' && '⚠ Moderate bias detected. Review the analysis below.'}
-          {result.bias_level === 'High' && '⚠ High bias detected. See the corrected version below.'}
+          {result.bias_level === 'Moderate' && 'Moderate bias detected. Review the analysis below.'}
+          {result.bias_level === 'High' && 'High bias detected. See the corrected version below.'}
         </div>
 
         <div className={styles.topRow}>

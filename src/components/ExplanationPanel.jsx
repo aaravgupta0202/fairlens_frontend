@@ -1,3 +1,4 @@
+import Icon from './Icon'
 import styles from './ExplanationPanel.module.css'
 
 /**
@@ -9,7 +10,7 @@ export default function ExplanationPanel({ explanation, flaggedPhrases }) {
     <div className={styles.wrapper}>
       <div className={styles.section}>
         <h4 className={styles.sectionTitle}>
-          <span>🔎</span> Why this bias exists
+          <Icon name='findings' size={14}/> Why this bias exists
         </h4>
         <p className={styles.explanation}>{explanation}</p>
       </div>
@@ -17,7 +18,7 @@ export default function ExplanationPanel({ explanation, flaggedPhrases }) {
       {flaggedPhrases && flaggedPhrases.length > 0 && (
         <div className={styles.section}>
           <h4 className={styles.sectionTitle}>
-            <span>⚠️</span> Flagged phrases
+            <Icon name='warning' size={14}/> Flagged phrases
           </h4>
           <div className={styles.phrases}>
             {flaggedPhrases.map((phrase, i) => (
