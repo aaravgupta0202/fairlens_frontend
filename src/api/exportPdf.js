@@ -234,251 +234,205 @@ export async function exportToPdf(prompt, aiResponse, result) {
 // ── AUDIT PDF (generalised schema) ───────────────────────────────────────────
 
 // ── AUDIT PDF ─────────────────────────────────────────────────────────────────
-export async function exportAuditToPdf(result, targetColumn, sensitiveColumn) {
+export async function exportAuditToPdf(result, description) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const MARGIN = 18, CONTENT_W = 210 - MARGIN * 2
 
-  // ── Safe helpers — jsPDF crashes on undefined/null/newline strings ──────────
-  const safe = (v, fallback = '') => (v != null ? String(v).replace(/\n/g, ' ').trim() : fallback)
-  const pct  = (v) => v != null ? `${(Number(v) * 100).toFixed(1)}%` : '—'
-  const fix4 = (v) => v != null ? Number(v).toFixed(4) : '—'
-  const fix1 = (v) => v != null ? Number(v).toFixed(1) : '—'
-  const num  = (v, fallback = '—') => v != null ? String(Math.round(Number(v))) : fallback
+  let y = pageHeader(doc, 'Dataset Fairness Audit Report',
+    `${result.bias_level} Bias  |  Score: ${Math.round(result.bias_score)}/100  |  ` +
+    `${result.total_rows?.toLocaleString()} rows  |  Sensitive: ${result.sensitive_column || 'auto'}  |  Target: ${result.target_column || 'auto'}`)
 
-  const biasScore  = Math.round(result.bias_score  || 0)
-  const biasLevel  = safe(result.bias_level,  'Unknown')
-  const riskLabel  = safe(result.risk_label,  'Unknown')
-  const totalRows  = safe(result.total_rows,  '0')
-  const sensitiveCol = safe(sensitiveColumn || result.sensitive_column, 'auto')
-  const targetCol    = safe(targetColumn    || result.target_column,    'auto')
-  const positiveClass = safe(result.positive_class, 'positive')
-  const primaryNum   = safe(result.primary_numeric_column, 'score')
-  const catColName   = safe(result.category_column, 'category')
+  // ── Score box ──
+  y = scoreBox(doc, result.bias_score, result.bias_level, result.risk_label, y)
 
-  const scoreColor = biasScore < 20 ? C.green : biasScore < 45 ? C.amber
-    : biasScore < 70 ? [249, 115, 22] : C.red
-
-  let y = header(doc, 'Dataset Fairness Audit Report',
-    `${biasLevel} Bias  |  Score: ${biasScore}/100  |  ${totalRows} rows  |  Sensitive: ${sensitiveCol}  |  Target: ${targetCol}`)
-
-  // ── Bias score box ──────────────────────────────────────────────────────────
-  doc.setFillColor(...C.surface)
-  doc.roundedRect(MARGIN, y, CONTENT_W, 28, 4, 4, 'F')
-  doc.setFillColor(...scoreColor)
-  doc.roundedRect(MARGIN, y, 50, 28, 4, 4, 'F')
-  doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.bg)
-  doc.text(num(result.bias_score, '0'), MARGIN + 8, y + 17)
-  doc.setFontSize(9); doc.text('/ 100', MARGIN + 26, y + 17)
-  doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(...scoreColor)
-  doc.text(`${biasLevel} Bias`, MARGIN + 58, y + 13)
-  doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.muted)
-  doc.text(riskLabel, MARGIN + 58, y + 22)
-  y += 36
-
-  // ── Bias origin ─────────────────────────────────────────────────────────────
-  const bo = result.bias_origin
-  if (bo) {
-    y = section(doc, 'Bias Origin', y, MARGIN)
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-    doc.text(`Most affected group: ${safe(bo.most_affected_group)}`, MARGIN, y)
-    doc.text(`Worst metric: ${safe(bo.worst_metric)} = ${fix4(bo.worst_metric_value)}`, MARGIN + 80, y)
-    y += 6
-    if (bo.most_biased_category) {
-      doc.text(`Most biased sub-category: ${safe(bo.most_biased_category)}`, MARGIN, y)
-      y += 6
+  // ── Most affected + reliability on same line ──
+  if (result.bias_origin || result.reliability) {
+    doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, 14, 2, 2, 'F')
+    if (result.bias_origin) {
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
+      doc.text('MOST AFFECTED', M + 4, y + 5)
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.red)
+      doc.text(result.bias_origin.group, M + 4, y + 11)
     }
-    y += 2
+    if (result.reliability) {
+      const rCol = result.reliability.reliability === 'High' ? C.green : result.reliability.reliability === 'Medium' ? C.amber : C.red
+      doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
+      doc.text('DATA RELIABILITY', M + 70, y + 5)
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...rCol)
+      doc.text(`${result.reliability.reliability} (${result.reliability.confidence_score}/100)`, M + 70, y + 11)
+    }
+    y += 20
   }
 
-  // ── Simulation ──────────────────────────────────────────────────────────────
-  const sim = result.simulation
-  if (sim) {
-    y = section(doc, 'Bias Fix Simulation', y, MARGIN)
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal')
-
-    if (sim.strategy) {
-      const stratLines = doc.splitTextToSize(safe(sim.strategy), CONTENT_W - 4)
-      doc.setTextColor(...C.muted); doc.text(stratLines, MARGIN, y)
-      y += stratLines.length * 4.5 + 2
+  // ── Root causes ──
+  if (result.root_causes?.length > 0) {
+    y = checkPage(doc, y, 12 + result.root_causes.length * 10)
+    y = sectionTitle(doc, 'Root Cause Analysis', y)
+    for (const cause of result.root_causes) {
+      y = checkPage(doc, y, 12)
+      const cL = doc.splitTextToSize(`• ${cause}`, CW - 8)
+      const cH = cL.length * 4.5 + 7
+      doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, cH, 2, 2, 'F')
+      doc.setFillColor(...C.red);     doc.rect(M, y, 3, cH, 'F')
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
+      doc.text(cL, M + 6, y + 5.5); y += cH + 3
     }
-
-    const beforeScore = Number(sim.before_score || 0)
-    const afterScore  = Number(sim.after_score  || 0)
-    const improvement = Number(sim.improvement  || 0)
-
-    // Before bar
-    doc.setFillColor(...C.surface2)
-    doc.roundedRect(MARGIN, y, CONTENT_W, 8, 2, 2, 'F')
-    const beforeW = Math.min((beforeScore / 100) * CONTENT_W, CONTENT_W)
-    doc.setFillColor(...C.red)
-    doc.roundedRect(MARGIN, y, beforeW, 8, 2, 2, 'F')
-    doc.setFontSize(7); doc.setTextColor(...C.text)
-    doc.text(`Before: ${beforeScore}/100  (DPD=${fix4(sim.before_dpd)})`, MARGIN + 2, y + 5.5)
-    y += 10
-
-    // After bar
-    doc.setFillColor(...C.surface2)
-    doc.roundedRect(MARGIN, y, CONTENT_W, 8, 2, 2, 'F')
-    const afterW = Math.min((afterScore / 100) * CONTENT_W, CONTENT_W)
-    doc.setFillColor(...C.green)
-    doc.roundedRect(MARGIN, y, afterW, 8, 2, 2, 'F')
-    doc.text(`After: ${afterScore}/100  (DPD=${fix4(sim.after_dpd)})  ↓ improved by ${improvement} pts`, MARGIN + 2, y + 5.5)
-    y += 12
-  }
-
-  // ── Fairness metrics ────────────────────────────────────────────────────────
-  y = section(doc, 'Fairness Metrics', y, MARGIN)
-  const metData = (result.metrics || []).map(m => ({
-    label: safe(m.name),
-    value: m.value != null ? m.value : 0,
-    maxValue: Math.max((m.value || 0) * 1.5, (m.threshold || 0.1) * 2, 0.01),
-    valueLabel: fix4(m.value),
-    color: m.flagged ? C.red : C.green,
-  }))
-  y = drawBarChart(doc, metData, MARGIN, y, CONTENT_W - 44, 0, '', MARGIN)
-  y += 4
-
-  // ── Group stats table ───────────────────────────────────────────────────────
-  const gs = result.group_stats || []
-  if (gs.length > 0) {
-    if (y > 200) { doc.addPage(); y = 20 }
-    y = section(doc, `Group Statistics — ${sensitiveCol}`, y, MARGIN)
-
-    const hasAvgNum = gs.some(g => g.avg_numeric != null)
-    const hasTpr    = gs.some(g => g.tpr != null)
-
-    const colDefs = [
-      { h: 'Group',    w: 32 },
-      { h: 'Count',    w: 16 },
-      { h: 'Positive', w: 18 },
-      { h: 'Negative', w: 18 },
-      { h: `${positiveClass} Rate`, w: 24 },
-      ...(hasAvgNum ? [{ h: `Avg ${primaryNum}`, w: 22 }] : []),
-      ...(hasTpr    ? [{ h: 'TPR', w: 16 }, { h: 'FPR', w: 16 }] : []),
-    ]
-
-    let cx = MARGIN
-    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
-    colDefs.forEach(col => { doc.text(col.h, cx, y); cx += col.w })
-    y += 5
-    doc.setDrawColor(...C.border); doc.setLineWidth(0.3)
-    doc.line(MARGIN, y, MARGIN + CONTENT_W, y); y += 3
-
-    gs.forEach(g => {
-      if (y > 265) { doc.addPage(); y = 20 }
-      const rate = g.selection_rate != null ? g.selection_rate : 0
-      const row = [
-        safe(g.group), safe(g.count), safe(g.positive_count), safe(g.negative_count),
-        pct(rate),
-        ...(hasAvgNum ? [fix1(g.avg_numeric)] : []),
-        ...(hasTpr ? [pct(g.tpr), pct(g.fpr)] : []),
-      ]
-      cx = MARGIN
-      doc.setFont('helvetica', 'normal')
-      row.forEach((val, i) => {
-        if (i === 4) doc.setTextColor(...(rate > 0.6 ? C.green : rate > 0.35 ? C.amber : C.red))
-        else doc.setTextColor(...C.text)
-        doc.text(val, cx, y)
-        cx += colDefs[i].w
-      })
-      y += 6
-      doc.setDrawColor(...C.border); doc.line(MARGIN, y, MARGIN + CONTENT_W, y); y += 2
-    })
     y += 4
   }
 
-  // ── Category analysis ───────────────────────────────────────────────────────
-  const cats = result.category_analysis || []
-  if (cats.length > 0) {
-    if (y > 200) { doc.addPage(); y = 20 }
-    y = section(doc, `Sub-Category Analysis — ${catColName}`, y, MARGIN)
-    cats.forEach(ca => {
-      if (y > 265) { doc.addPage(); y = 20 }
-      doc.setFillColor(...(ca.flagged ? [60, 20, 20] : C.surface))
-      doc.roundedRect(MARGIN, y, CONTENT_W, 11, 2, 2, 'F')
-      doc.setFillColor(...(ca.flagged ? C.red : C.green))
-      doc.rect(MARGIN, y, 3, 11, 'F')
-      doc.setFontSize(8); doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...(ca.flagged ? C.red : C.green))
-      doc.text(safe(ca.category_value), MARGIN + 6, y + 7)
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.muted)
-      const noteStr = `Rate: ${pct(ca.selection_rate)}  Gap: ${pct(ca.group_gap)}${ca.bias_note ? '  — ' + ca.bias_note : ''}`
-      const noteLines = doc.splitTextToSize(noteStr, CONTENT_W - 44)
-      doc.text(noteLines[0] || '', MARGIN + 38, y + 7)
-      y += 14
-    })
-    y += 2
+  // ── Fairness metrics bars ──
+  y = checkPage(doc, y, 12 + (result.metrics?.length || 0) * 12)
+  y = sectionTitle(doc, 'Fairness Metrics', y)
+  for (const m of (result.metrics || [])) {
+    y = checkPage(doc, y, 12)
+    const maxVal = m.threshold_direction === 'above'
+      ? Math.max(1, m.value * 1.3)
+      : Math.max(m.threshold ? m.threshold * 2 : 0.5, m.value * 1.3, 0.01)
+    const col = m.flagged ? C.red : C.green
+    y = hBar(doc, m.name + (m.flagged ? ' ⚠' : ' ✓'), m.value, maxVal, col, M, y, CW - 60, 60)
+  }
+  y += 4
+
+  // ── Pass rate by group bars ──
+  if (result.group_stats?.length > 0) {
+    y = checkPage(doc, y, 12 + result.group_stats.length * 12)
+    y = sectionTitle(doc, 'Pass Rate by Group', y)
+    const maxPassRate = Math.max(...result.group_stats.map(g => g.pass_rate))
+    const minPassRate = Math.min(...result.group_stats.map(g => g.pass_rate))
+    for (const g of result.group_stats) {
+      y = checkPage(doc, y, 12)
+      const col = g.pass_rate === maxPassRate ? C.green : g.pass_rate === minPassRate ? C.red : C.amber
+      y = hBar(doc, g.group, g.pass_rate * 100, 100, col, M, y, CW - 36, 36)
+    }
+    y += 4
   }
 
-  // ── Root causes ─────────────────────────────────────────────────────────────
-  const rcs = result.root_causes || []
-  if (rcs.length > 0) {
-    if (y > 200) { doc.addPage(); y = 20 }
-    y = section(doc, 'Root Causes', y, MARGIN)
-    rcs.forEach((rc, i) => {
-      if (y > 265) { doc.addPage(); y = 20 }
-      const lines = doc.splitTextToSize(`${i + 1}. ${safe(rc)}`, CONTENT_W - 6)
-      const h = lines.length * 4.5 + 6
-      doc.setFillColor(...C.surface); doc.roundedRect(MARGIN, y, CONTENT_W, h, 2, 2, 'F')
-      doc.setFillColor(...C.primary); doc.roundedRect(MARGIN, y, 3, h, 1, 1, 'F')
-      doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-      doc.text(lines, MARGIN + 6, y + 5)
-      y += h + 3
-    })
-    y += 2
+  // ── Group stats table ──
+  if (result.group_stats?.length > 0) {
+    y = checkPage(doc, y, 20 + result.group_stats.length * 7)
+    y = sectionTitle(doc, 'Group Statistics Table', y)
+    const hasAvg = result.group_stats.some(g => g.avg_value != null)
+    const hasTpr = result.group_stats.some(g => g.tpr != null)
+    const cols = ['Group', 'Count', ...(hasAvg ? ['Avg Value'] : []), 'Pass', 'Fail', 'Pass Rate', ...(hasTpr ? ['TPR', 'FPR'] : [])]
+    const colW = [30, 14, ...(hasAvg ? [18] : []), 12, 12, 20, ...(hasTpr ? [14, 14] : [])]
+
+    let cx = M
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.muted)
+    cols.forEach((c, i) => { doc.text(c, cx, y); cx += colW[i] })
+    y += 3.5
+    doc.setDrawColor(...C.border); doc.setLineWidth(0.25); doc.line(M, y, M + CW, y); y += 2.5
+
+    for (const g of result.group_stats) {
+      y = checkPage(doc, y, 8)
+      const isMin = g.pass_rate === Math.min(...result.group_stats.map(x => x.pass_rate))
+      cx = M
+      doc.setFontSize(7.5); doc.setFont('helvetica', isMin ? 'bold' : 'normal')
+      const row = [
+        g.group, String(g.count),
+        ...(hasAvg ? [g.avg_value != null ? g.avg_value.toFixed(1) : '—'] : []),
+        String(g.pass_count), String(g.fail_count),
+        `${(g.pass_rate * 100).toFixed(1)}%`,
+        ...(hasTpr ? [g.tpr != null ? `${(g.tpr*100).toFixed(1)}%` : '—', g.fpr != null ? `${(g.fpr*100).toFixed(1)}%` : '—'] : []),
+      ]
+      row.forEach((val, i) => {
+        const isRate = cols[i] === 'Pass Rate'
+        doc.setTextColor(...(isRate ? (g.pass_rate > 0.6 ? C.green : g.pass_rate > 0.35 ? C.amber : C.red) : C.text))
+        doc.text(val, cx, y); cx += colW[i]
+      })
+      y += 5
+      doc.setDrawColor(...C.border); doc.setLineWidth(0.15); doc.line(M, y, M + CW, y); y += 1.5
+    }
+    y += 4
   }
 
-  // ── AI Summary ──────────────────────────────────────────────────────────────
+  // ── Simulation ──
+  // ── Mitigation (3-method comparison) ──
+  if (result.mitigation) {
+    const mit = result.mitigation
+    y = checkPage(doc, y, 50)
+    y = sectionTitle(doc, 'Bias Fix Mitigation', y)
+
+    // Banner: before → after
+    doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, 18, 2, 2, 'F')
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...C.red);   doc.text(`${mit.bias_before}`, M + 6, y + 12)
+    doc.setFontSize(9);  doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.muted)
+    doc.text('→', M + 22, y + 12)
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...C.green); doc.text(`${mit.bias_after}`, M + 32, y + 12)
+    doc.setFontSize(8);  doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.green)
+    const improvement = Math.round(mit.bias_before - mit.bias_after)
+    doc.text(`  −${improvement} pts  |  ${mit.trade_off_summary}`, M + 50, y + 12)
+    y += 22
+
+    // Before bar
+    y = hBar(doc, 'Before', mit.bias_before, 100, C.red, M, y, CW - 28, 28)
+
+    // Per-method bars
+    const methodColors = { 'reweighing': C.primary, 'threshold_optimisation': C.accent, 'adversarial_debiasing': [99, 102, 241] }
+    for (const r of (mit.results || [])) {
+      const isBest = r.method === mit.best_method
+      const col = isBest ? C.green : (methodColors[r.method] || C.muted)
+      const methodName = r.method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+      const label = methodName + (isBest ? ' (Best)' : '')
+      y = checkPage(doc, y, 12)
+      y = hBar(doc, label, r.bias_score, 100, col, M, y, CW - 44, 44)
+    }
+
+    // Best reason
+    y += 3
+    const reasonL = doc.splitTextToSize(`Best: ${mit.best_reason}`, CW - 8)
+    const reasonH = reasonL.length * 4 + 8
+    doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, reasonH, 2, 2, 'F')
+    doc.setFillColor(...C.green);   doc.roundedRect(M, y, 3, reasonH, 1, 1, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
+    doc.text(reasonL, M + 6, y + 5); y += reasonH + 4
+  }
+
+  // ── AI Summary ──
   if (result.summary) {
-    if (y > 200) { doc.addPage(); y = 20 }
-    y = section(doc, 'AI Analysis Summary', y, MARGIN)
-    doc.setFillColor(...C.surface)
-    const cleanSummary = safe(result.summary).replace(/\\n\\n/g, ' ').replace(/\\n/g, ' ')
-    const sumLines = doc.splitTextToSize(cleanSummary, CONTENT_W - 8)
-    const sumH = Math.min(sumLines.length * 4.8 + 12, 80)
-    doc.roundedRect(MARGIN, y, CONTENT_W, sumH, 3, 3, 'F')
-    doc.setFillColor(...C.primary); doc.rect(MARGIN, y, 3, sumH, 'F')
+    y = checkPage(doc, y, 30)
+    y = sectionTitle(doc, 'AI Analysis Summary', y)
+    const sumL = doc.splitTextToSize(result.summary.replace(/\n\n/g, ' '), CW - 8)
+    const sumH = Math.min(sumL.length * 4.5 + 10, 65)
+    doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, sumH, 2, 2, 'F')
+    doc.setFillColor(...C.primary); doc.rect(M, y, 3, sumH, 'F')
     doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-    doc.text(sumLines.slice(0, Math.floor((sumH - 8) / 4.8)), MARGIN + 6, y + 8)
-    y += sumH + 6
+    doc.text(sumL.slice(0, Math.floor((sumH - 8) / 4.5)), M + 6, y + 7)
+    y += sumH + 5
   }
 
-  // ── Key findings ────────────────────────────────────────────────────────────
-  const findings = result.key_findings || []
-  if (findings.length > 0) {
-    if (y > 210) { doc.addPage(); y = 20 }
-    y = section(doc, 'Key Findings', y, MARGIN)
-    findings.forEach((f, i) => {
-      if (y > 262) { doc.addPage(); y = 20 }
-      const lines = doc.splitTextToSize(`${i + 1}. ${safe(f)}`, CONTENT_W - 10)
-      const h = lines.length * 4.5 + 8
-      doc.setFillColor(...C.surface); doc.roundedRect(MARGIN, y, CONTENT_W, h, 3, 3, 'F')
-      doc.setFillColor(...(i % 2 === 0 ? C.primary : C.accent)); doc.roundedRect(MARGIN, y, 3, h, 1, 1, 'F')
+  // ── Key findings ──
+  if (result.key_findings?.length > 0) {
+    y = checkPage(doc, y, 20)
+    y = sectionTitle(doc, 'Key Findings', y)
+    for (let i = 0; i < result.key_findings.length; i++) {
+      y = checkPage(doc, y, 12)
+      const fL = doc.splitTextToSize(`${i+1}.  ${result.key_findings[i]}`, CW - 10)
+      const fH = fL.length * 4.3 + 7
+      doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, fH, 2, 2, 'F')
+      doc.setFillColor(...(i%2===0 ? C.primary : C.accent)); doc.roundedRect(M, y, 3, fH, 1, 1, 'F')
       doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-      doc.text(lines, MARGIN + 6, y + 6)
-      y += h + 4
-    })
+      doc.text(fL, M + 6, y + 5.5); y += fH + 3
+    }
     y += 2
   }
 
-  // ── Recommendations ─────────────────────────────────────────────────────────
-  const recs = result.recommendations || []
-  if (recs.length > 0) {
-    if (y > 210) { doc.addPage(); y = 20 }
-    y = section(doc, 'Recommendations', y, MARGIN)
-    recs.forEach((r, i) => {
-      if (y > 262) { doc.addPage(); y = 20 }
-      const lines = doc.splitTextToSize(`→ ${safe(r)}`, CONTENT_W - 10)
-      const h = lines.length * 4.5 + 8
-      doc.setFillColor(...C.surface); doc.roundedRect(MARGIN, y, CONTENT_W, h, 3, 3, 'F')
-      doc.setFillColor(...C.green); doc.roundedRect(MARGIN, y, 3, h, 1, 1, 'F')
+  // ── Recommendations ──
+  if (result.recommendations?.length > 0) {
+    y = checkPage(doc, y, 20)
+    y = sectionTitle(doc, 'Recommendations', y)
+    for (const r of result.recommendations) {
+      y = checkPage(doc, y, 12)
+      const rL = doc.splitTextToSize(`→  ${r}`, CW - 10)
+      const rH = rL.length * 4.3 + 7
+      doc.setFillColor(...C.surface); doc.roundedRect(M, y, CW, rH, 2, 2, 'F')
+      doc.setFillColor(...C.green); doc.roundedRect(M, y, 3, rH, 1, 1, 'F')
       doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text)
-      doc.text(lines, MARGIN + 6, y + 6)
-      y += h + 4
-    })
+      doc.text(rL, M + 6, y + 5.5); y += rH + 3
+    }
   }
 
-  addFooter(doc)
+  pageFooter(doc)
   doc.save(`FairLens_AuditReport_${Date.now()}.pdf`)
 }

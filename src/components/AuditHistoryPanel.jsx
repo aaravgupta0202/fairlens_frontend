@@ -1,5 +1,5 @@
+import { useState } from 'react'
 import Icon from './Icon'
-import { useState } from 'react' 
 import { getAuditHistory, clearAuditHistory, deleteAuditHistoryItem } from '../api/history'
 import styles from './HistoryPanel.module.css'
 
