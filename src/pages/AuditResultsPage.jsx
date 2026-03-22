@@ -27,7 +27,12 @@ function MetricCard({ metric }) {
           {metric.flagged ? 'Flagged' : 'OK'}
         </span>
       </div>
-      <div className={styles.metricValue}>{val.toFixed(4)}</div>
+      <div className={styles.metricValue}>
+        {metric.key === 'performance_gap'
+          ? `${val.toFixed(1)}%`
+          : val.toFixed(4)
+        }
+      </div>
       <div className={styles.metricTrack}>
         <div className={styles.metricFill} style={{ width: `${pct}%`, background: metric.flagged ? 'var(--red)' : 'var(--green)' }}/>
         {metric.threshold != null && (
@@ -170,6 +175,9 @@ export default function AuditResultsPage() {
     reliability,
     summary, key_findings = [], recommendations = [],
     audit_summary_json,
+    score_breakdown,
+    all_numeric_gaps = [],
+    primary_numeric_column,
   } = result
 
   const scoreColor = bias_score < 20 ? 'var(--green)' : bias_score < 45 ? 'var(--amber)' : bias_score < 70 ? '#f97316' : 'var(--red)'
@@ -196,7 +204,7 @@ export default function AuditResultsPage() {
   const mitigationChartData = mitigation ? [
     { name: 'Before', score: mitigation.bias_before, fill: 'var(--red)' },
     ...(mitigation.results || []).map(r => ({
-      name: r.method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      name: r.method === 'rate_equalisation' ? 'Rate Equalisation' : r.method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
       score: r.bias_score,
       fill: r.method === mitigation.best_method ? 'var(--green)' : 'var(--primary)',
       accuracy: r.accuracy,
@@ -252,51 +260,10 @@ export default function AuditResultsPage() {
       </header>
 
       {/* ── Score Strip ── */}
-      <div className={styles.scoreStrip}>
-        <div className={styles.scoreStripLeft}>
-          <div className={styles.gaugeSmall}>
-            <BiasGauge score={bias_score} level={bias_level}/>
-          </div>
-          <div className={styles.scoreStripInfo}>
-            <span className={styles.scoreLevel} style={{ color: scoreColor }}>{bias_level} Bias</span>
-            <span className={styles.scoreMeta}>
-              {risk_label} · {total_rows?.toLocaleString()} rows
-              {sensitive_column && ` · ${sensitive_column}`}
-            </span>
-          </div>
-        </div>
-        <div className={styles.scoreStripRight}>
-          {bias_origin && (
-            <div className={styles.stripPill} style={{ borderColor: 'var(--red)' + '44' }}>
-              <span className={styles.stripPillLabel}>Most Affected</span>
-              <span className={styles.stripPillValue} style={{ color: 'var(--red)' }}>{bias_origin.group}</span>
-            </div>
-          )}
-          {reliabilityData.reliability !== 'Unknown' && (
-            <div className={styles.stripPill} style={{ borderColor: reliabilityColor + '44' }}>
-              <span className={styles.stripPillLabel}>Reliability</span>
-              <span className={styles.stripPillValue} style={{ color: reliabilityColor }}>
-                {reliabilityData.reliability} · {reliabilityData.confidence_score ?? '—'}/100
-              </span>
-            </div>
-          )}
-          {flaggedMetrics.length > 0 && (
-            <div className={styles.flaggedChip}>
-              <span className={styles.flaggedChipDot}/>
-              {flaggedMetrics.length} flagged
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* ── Warnings Strip ── */}
-      {reliabilityData.warnings?.length > 0 && (
-        <div className={styles.warningsStrip}>
-          {reliabilityData.warnings.map((w, i) => (
-            <span key={i} className={styles.warningChip}><Icon name="warning" size={11}/> {w}</span>
-          ))}
-        </div>
-      )}
+
+
+
 
       {/* ── Tab Bar ── */}
       <div className={styles.tabBar}>
@@ -415,6 +382,14 @@ export default function AuditResultsPage() {
                 <div>
                   <p className={styles.statSigTitle}>
                     {statistical_test.is_significant ? 'Statistically Significant Bias' : 'Not Statistically Significant'}
+                    {statistical_test.cramers_v != null && (
+                      <span className={styles.effectBadge} style={{
+                        color: statistical_test.cramers_v >= 0.40 ? 'var(--red)' :
+                               statistical_test.cramers_v >= 0.20 ? 'var(--amber)' : 'var(--text-muted)'
+                      }}>
+                        {' '}· Cramér's V = {statistical_test.cramers_v?.toFixed(3)} ({statistical_test.effect_size} effect)
+                      </span>
+                    )}
                   </p>
                   <p className={styles.statSigText}>{statistical_test.interpretation}</p>
                 </div>
@@ -509,7 +484,11 @@ export default function AuditResultsPage() {
                     <thead>
                       <tr>
                         <th>Group</th><th>Count</th>
-                        {group_stats[0]?.avg_value != null && <th>Avg Value</th>}
+                        {/* Show all numeric columns from avg_by_col if available, else fallback to avg_value */}
+                        {group_stats[0]?.avg_by_col && Object.keys(group_stats[0].avg_by_col).length > 0
+                          ? Object.keys(group_stats[0].avg_by_col).map(col => <th key={col}>Avg {col}</th>)
+                          : group_stats[0]?.avg_value != null && <th>Avg Value</th>
+                        }
                         <th>Pass</th><th>Fail</th><th>Pass Rate</th>
                         {group_stats[0]?.tpr != null && <th>TPR</th>}
                         {group_stats[0]?.fpr != null && <th>FPR</th>}
@@ -523,7 +502,12 @@ export default function AuditResultsPage() {
                             {g.pass_rate === minRate && <span className={styles.lowestTag}>most affected</span>}
                           </td>
                           <td>{g.count}</td>
-                          {group_stats[0]?.avg_value != null && <td>{g.avg_value?.toFixed(1) ?? '—'}</td>}
+                          {g.avg_by_col && Object.keys(g.avg_by_col).length > 0
+                            ? Object.keys(g.avg_by_col).map(col => (
+                                <td key={col}>{g.avg_by_col[col]?.toFixed(1) ?? '—'}</td>
+                              ))
+                            : group_stats[0]?.avg_value != null && <td>{g.avg_value?.toFixed(1) ?? '—'}</td>
+                          }
                           <td style={{ color: 'var(--green)' }}>{g.pass_count}</td>
                           <td style={{ color: 'var(--red)' }}>{g.fail_count}</td>
                           <td>
@@ -540,6 +524,87 @@ export default function AuditResultsPage() {
                 </div>
               </div>
             )}
+
+            {/* Numeric column gaps breakdown */}
+            {all_numeric_gaps.length > 0 && (
+              <div className={styles.card}>
+                <h3 className={styles.cardTitle}>Numeric Column Gaps by Group</h3>
+                <p className={styles.cardHint}>
+                  Gap = (highest group avg − lowest group avg) / column range × 100.
+                  Flagged if &gt; 10%. The column with the largest gap drives the Performance Gap metric.
+                </p>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Column</th>
+                        <th>Gap %</th>
+                        <th>Raw Gap</th>
+                        <th>Lowest Group</th>
+                        <th>Highest Group</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...all_numeric_gaps].sort((a, b) => b.gap_pct - a.gap_pct).map(g => (
+                        <tr key={g.col}>
+                          <td><strong>{g.col}</strong></td>
+                          <td>{g.gap_pct.toFixed(1)}%</td>
+                          <td>{g.gap_raw.toFixed(2)}</td>
+                          <td style={{ color: 'var(--red)' }}>{g.lo_group} ({g.lo_avg})</td>
+                          <td style={{ color: 'var(--green)' }}>{g.hi_group} ({g.hi_avg})</td>
+                          <td>
+                            <span className={`${styles.badge} ${g.gap_pct > 10 ? styles.badgeRed : styles.badgeGreen}`}>
+                              {g.gap_pct > 10 ? 'Flagged' : 'OK'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Numeric feature gap analysis */}
+            {all_numeric_gaps?.length > 1 && (
+              <div className={styles.card}>
+                <h3 className={styles.cardTitle}>Numeric Feature Gaps by Group</h3>
+                <p className={styles.cardHint}>
+                  Larger gaps in numeric features may reveal hidden drivers of bias.
+                  Sorted by severity — gap expressed as % of each column's full range.
+                </p>
+                <div className={styles.numericGapsGrid}>
+                  {[...all_numeric_gaps].sort((a, b) => b.gap_pct - a.gap_pct).map(gap => (
+                    <div key={gap.col} className={`${styles.numericGapItem} ${gap.gap_pct > 10 ? styles.numericGapFlagged : ''}`}>
+                      <div className={styles.numericGapHeader}>
+                        <span className={styles.numericGapCol}>{gap.col}</span>
+                        <span className={styles.numericGapPct}
+                          style={{ color: gap.gap_pct > 10 ? 'var(--red)' : gap.gap_pct > 5 ? 'var(--amber)' : 'var(--green)' }}>
+                          {gap.gap_pct.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className={styles.numericGapBar}>
+                        <div className={styles.numericGapFill}
+                          style={{
+                            width: `${Math.min(gap.gap_pct * 5, 100)}%`,
+                            background: gap.gap_pct > 10 ? 'var(--red)' : gap.gap_pct > 5 ? 'var(--amber)' : 'var(--green)'
+                          }}/>
+                      </div>
+                      <div className={styles.numericGapGroups}>
+                        {Object.entries(gap.avgs || {}).sort(([,a],[,b]) => b-a).map(([grp, avg]) => (
+                          <span key={grp} className={styles.numericGapGroup}>
+                            <strong>{grp}</strong> {avg}
+                          </span>
+                        ))}
+                        <span className={styles.numericGapRaw}>raw gap: {gap.gap_raw}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
@@ -549,88 +614,116 @@ export default function AuditResultsPage() {
             <h2 className={styles.tabTitle}>Fix Bias</h2>
             <p className={styles.tabSubtitle}>
               Three mitigation strategies evaluated automatically.
-              Best selected by: <strong>0.6 × bias_reduction + 0.3 × accuracy + 0.1 × stability</strong>
+              Ranked by: <strong>0.4 × DPD_reduction + 0.4 × est_accuracy + 0.2 × rate_stability</strong> (confidence-discounted).
+              All values are projections — actual improvement requires implementation.
             </p>
 
             {!mitigation ? (
               <div className={styles.emptyState}><p>Run an audit to see mitigation results.</p></div>
             ) : (
               <>
+                {/* Projection disclaimer */}
+                <div className={styles.projectionNotice}>
+                  <Icon name="insights" size={14}/>
+                  <span>These are <strong>projected</strong> outcomes — simulations of what each technique could achieve. Actual results depend on model retraining and implementation.</span>
+                </div>
+
+                {/* Banner */}
                 <div className={styles.simResultBanner}>
                   <div className={styles.simBannerScore}>
-                    <span className={styles.simBannerNum} style={{ color: 'var(--red)' }}>{mitigation.bias_before}</span>
+                    <div className={styles.simBannerItem}>
+                      <span className={styles.simBannerLabel}>Current Bias</span>
+                      <span className={styles.simBannerNum} style={{ color: 'var(--red)' }}>{mitigation.bias_before}</span>
+                    </div>
                     <span className={styles.simBannerArrow}>→</span>
-                    <span className={styles.simBannerNum} style={{ color: 'var(--green)' }}>{mitigation.bias_after}</span>
+                    <div className={styles.simBannerItem}>
+                      <span className={styles.simBannerLabel}>Projected Best</span>
+                      <span className={styles.simBannerNum} style={{ color: 'var(--green)' }}>{mitigation.bias_after}</span>
+                    </div>
                   </div>
                   <div className={styles.simBannerImprovement}>
-                    <span className={styles.simBannerImpLabel}>Best result</span>
+                    <span className={styles.simBannerImpLabel}>Best Method: {mitigation.best_method.split('_').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')}</span>
                     <span className={styles.simBannerImpVal}>{mitigation.trade_off_summary}</span>
                   </div>
                 </div>
 
+                {/* Chart — use full 0-100 scale so bars are visible */}
                 <div className={styles.card}>
-                  <h3 className={styles.cardTitle}>Method Comparison — Bias Score</h3>
-                  <p className={styles.cardHint}>Green = best method ({mitigation.best_method.replace(/_/g, ' ')})</p>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={mitigationChartData} barCategoryGap="20%" barSize={60}>
+                  <h3 className={styles.cardTitle}>Projected Bias Score by Method</h3>
+                  <p className={styles.cardHint}>Lower is better · Green = recommended method · All values are projections</p>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={mitigationChartData} barCategoryGap="25%" barSize={80}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
-                      <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }}/>
-                      <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
+                      <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 12 }}/>
+                      <YAxis domain={[0, Math.max(mitigation.bias_before * 1.1, 10)]}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
+                        label={{ value: 'Bias Score', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 11 }}/>
                       <Tooltip
                         formatter={(v, n, p) => [
-                          `${v} bias score${p.payload.accuracy != null ? ` | Acc: ${(p.payload.accuracy*100).toFixed(1)}%` : ''}`,
-                          p.payload.isBest ? 'Best Method' : p.payload.name
+                          `${v} projected bias${p.payload.accuracy != null ? ` | Accuracy: ${(p.payload.accuracy*100).toFixed(1)}%` : ''}`,
+                          p.payload.isBest ? '★ Recommended' : p.payload.name
                         ]}
                         {...tt}/>
-                      <Bar dataKey="score" radius={[6, 6, 0, 0]}>
-                        <LabelList dataKey="score" position="top" style={{ fill: 'var(--text)', fontSize: 13, fontWeight: 700 }}/>
+                      <Bar dataKey="score" radius={[6, 6, 0, 0]} minPointSize={4}>
+                        <LabelList dataKey="score" position="top"
+                          style={{ fill: 'var(--text)', fontSize: 13, fontWeight: 700 }}/>
                         {mitigationChartData.map((entry, i) => (
-                          <Cell key={i} fill={entry.fill} fillOpacity={entry.isBest ? 1.0 : 0.75}/>
+                          <Cell key={i} fill={entry.fill} fillOpacity={entry.isBest ? 1.0 : 0.7}/>
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
+                {/* Method cards */}
                 <div className={styles.mitigationGrid}>
                   {(mitigation.results || []).map(r => (
                     <div key={r.method}
                       className={`${styles.mitigationCard} ${r.method === mitigation.best_method ? styles.mitigationCardBest : ''}`}>
                       {r.method === mitigation.best_method && (
-                        <div className={styles.bestBadge}>Best Method</div>
+                        <div className={styles.bestBadge}>Recommended</div>
                       )}
                       <h4 className={styles.mitigationMethod}>
-                        {r.method.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        {r.method === 'rate_equalisation' ? 'Rate Equalisation' : r.method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                       </h4>
                       <p className={styles.mitigationDesc}>{r.description}</p>
                       <div className={styles.mitigationStats}>
                         <div className={styles.mitigationStat}>
-                          <span className={styles.mitigationStatLabel}>Bias Score</span>
-                          <span className={styles.mitigationStatVal} style={{ color: r.bias_score < 30 ? 'var(--green)' : r.bias_score < 60 ? 'var(--amber)' : 'var(--red)' }}>
-                            {r.bias_score}
+                          <span className={styles.mitigationStatLabel}>Projected Bias</span>
+                          <span className={styles.mitigationStatVal}
+                            style={{ color: r.bias_score < 20 ? 'var(--green)' : r.bias_score < 45 ? 'var(--amber)' : 'var(--red)' }}>
+                            {r.bias_score} / 100
                           </span>
                         </div>
                         <div className={styles.mitigationStat}>
-                          <span className={styles.mitigationStatLabel}>Improvement</span>
-                          <span className={styles.mitigationStatVal} style={{ color: 'var(--green)' }}>-{r.improvement} pts</span>
+                          <span className={styles.mitigationStatLabel}>Bias Reduction</span>
+                          <span className={styles.mitigationStatVal}
+                            style={{ color: r.improvement > 0 ? 'var(--green)' : 'var(--red)' }}>
+                            {r.improvement > 0 ? `↓ ${r.improvement} pts` : `↑ ${Math.abs(r.improvement)} pts`}
+                          </span>
+                        </div>
+                        <div className={styles.mitigationStat}>
+                          <span className={styles.mitigationStatLabel}>Accuracy (upper bound)</span>
+                          <span className={styles.mitigationStatVal}>
+                            {r.accuracy != null ? `${(r.accuracy*100).toFixed(1)}%` : '—'}
+                          </span>
                         </div>
                         <div className={styles.mitigationStat}>
                           <span className={styles.mitigationStatLabel}>DPD After</span>
                           <span className={styles.mitigationStatVal}>{r.dpd.toFixed(4)}</span>
                         </div>
                         <div className={styles.mitigationStat}>
-                          <span className={styles.mitigationStatLabel}>TPR Gap</span>
-                          <span className={styles.mitigationStatVal}>{r.tpr_gap.toFixed(4)}</span>
+                          <span className={styles.mitigationStatLabel}>Rank Score</span>
+                          <span className={styles.mitigationStatVal}
+                            style={{ color: r.final_score >= 0 ? 'var(--text)' : 'var(--red)' }}>
+                            {r.final_score >= 0 ? r.final_score.toFixed(3) : 'Invalid'}
+                          </span>
                         </div>
-                        {r.accuracy != null && (
-                          <div className={styles.mitigationStat}>
-                            <span className={styles.mitigationStatLabel}>Accuracy</span>
-                            <span className={styles.mitigationStatVal}>{(r.accuracy * 100).toFixed(1)}%</span>
-                          </div>
-                        )}
                         <div className={styles.mitigationStat}>
-                          <span className={styles.mitigationStatLabel}>Selection Score</span>
-                          <span className={styles.mitigationStatVal}>{r.final_score >= 0 ? r.final_score.toFixed(3) : 'Invalid'}</span>
+                          <span className={styles.mitigationStatLabel}>TPR/FPR</span>
+                          <span className={styles.mitigationStatVal} style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {has_predictions ? (r.tpr_gap?.toFixed(4) ?? '—') : 'Label-only'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -717,11 +810,38 @@ export default function AuditResultsPage() {
             <div className={styles.card}>
               <h3 className={styles.cardTitle}>Bias Score Formula</h3>
               <div className={styles.formulaBox}>
-                <p>{`bias_score = mean(violations) × 100
-violations = [dpd_v, dir_v${has_predictions ? ', tpr_v, fpr_v' : ' (TPR/FPR excluded — no prediction column)'}]
-dpd_v = min(DPD/0.10, 1)   dir_v = 0 if DIR>=0.80 else min((0.80-DIR)/0.80, 1)
-tpr_v = min(TPR_gap/0.10, 1)   fpr_v = min(FPR_gap/0.10, 1)`}</p>
-                <p className={styles.formulaNote}>All metrics computed in Python. Gemini writes text only.</p>
+                <p style={{whiteSpace: 'pre-wrap'}}>{has_predictions
+                  ? [
+                      'bias_score = (0.40 x dpd_v + 0.25 x dir_v + 0.20 x tpr_v + 0.15 x fpr_v) x 100',
+                      '',
+                      'dpd_v = graduated curve (not hard cap):',
+                      '  DPD <= 0.10 : dpd_v = DPD / 0.10 x 0.75    (0.05 -> 0.375, 0.10 -> 0.75)',
+                      '  DPD >  0.10 : dpd_v = 0.75 + 0.25 x sqrt((DPD - 0.10) / 0.90)',
+                      '                        (0.20 -> 0.88, 0.40 -> 0.94, 1.0 -> 1.0)',
+                      'dir_v = 0 if DIR >= 0.80 else min((0.80 - DIR) / 0.80, 1)   [legal 4/5 rule]',
+                      'tpr_v = same graduated curve scaled to 0.10 threshold        [Equal Opportunity]',
+                      'fpr_v = same graduated curve scaled to 0.10 threshold        [Equalized Odds]',
+                    ].join('\n')
+                  : [
+                      'bias_score = (0.60 x dpd_v + 0.40 x dir_v) x 100',
+                      '',
+                      'dpd_v = graduated curve (not hard cap):',
+                      '  DPD <= 0.10 : dpd_v = DPD / 0.10 x 0.75    (0.05 -> 0.375, 0.10 -> 0.75)',
+                      '  DPD >  0.10 : dpd_v = 0.75 + 0.25 x sqrt((DPD - 0.10) / 0.90)',
+                      '                        (0.20 -> 0.88, 0.40 -> 0.94, 1.0 -> 1.0)',
+                      'dir_v = 0 if DIR >= 0.80 else min((0.80 - DIR) / 0.80, 1)   [legal 4/5 rule]',
+                      '',
+                      'DPD weighted 0.60 (primary metric), DIR weighted 0.40 (legal dimension).',
+                      'Weighted not averaged -- avoids double-counting the same disparity.',
+                      'Graduated curve -- DPD=0.11 and DPD=0.80 score differently (no hard cap).',
+                      'TPR/FPR excluded: no prediction column (label-only mode).',
+                    ].join('\n')
+                }</p>
+                <p className={styles.formulaNote}>
+                  All metrics computed in Python. Gemini writes narrative text only.
+                  Theil uses population-weighted formula. Performance gap normalised to column range.
+                  Chi-square + Cramer&apos;s V: V&lt;0.10 negligible, 0.10-0.20 small, 0.20-0.40 medium, &gt;=0.40 large.
+                </p>
               </div>
             </div>
 
@@ -750,5 +870,5 @@ tpr_v = min(TPR_gap/0.10, 1)   fpr_v = min(FPR_gap/0.10, 1)`}</p>
 
       </div>
     </div>
-  )
+  );
 }
