@@ -20,7 +20,7 @@ export default function BiasGauge({ score, level, confidence }) {
 
   const filled = (animated / 100) * circumference
   const gap    = circumference - filled
-  const color  = score < 20 ? '#4ade80' : score < 45 ? '#fbbf24' : score < 70 ? '#f97316' : '#f87171'
+  const color  = score < 20 ? 'var(--green)' : score < 45 ? 'var(--amber)' : score < 70 ? '#f97316' : 'var(--red)'
   const label  = level || (score < 20 ? 'Low' : score < 45 ? 'Moderate' : score < 70 ? 'High' : 'Critical')
 
   return (

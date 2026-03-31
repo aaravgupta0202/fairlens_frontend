@@ -1,60 +1,54 @@
 from pydantic import BaseModel
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Any, Optional
 
 
-# ── Requests ──────────────────────────────────────────────────────────────────
+# ── Request ──────────────────────────────────────────────────────────────────
 
 class AuditRequest(BaseModel):
-    dataset: str
-    description: str
+    dataset: str                          # base64-encoded CSV
+    description: str                      # user's plain-English explanation
     target_column: Optional[str] = None
-    prediction_column: Optional[str] = None   # NEW: model predictions
     sensitive_column: Optional[str] = None
     sensitive_column_2: Optional[str] = None
+    prediction_column: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
     dataset_description: str
-    audit_summary: str
-    conversation: List[Dict[str, str]]
+    audit_summary: str                   # compact JSON string of findings
+    conversation: List[Dict[str, str]]   # [{"role": "user"|"assistant", "content": "..."}]
     message: str
 
 
-# ── Per-group statistics ──────────────────────────────────────────────────────
+# ── Confusion matrix ─────────────────────────────────────────────────────────
 
 class ConfusionMatrix(BaseModel):
     tp: int
     fp: int
     tn: int
     fn: int
+    tpr: Optional[float] = None
+    fpr: Optional[float] = None
+    acc: Optional[float] = None
 
 
-class NumericGap(BaseModel):
-    col: str
-    gap_pct: float
-    gap_raw: float
-    lo_group: str
-    lo_avg: float
-    hi_group: str
-    hi_avg: float
-
+# ── Per-group stats ──────────────────────────────────────────────────────────
 
 class GroupStats(BaseModel):
     group: str
     count: int
     avg_value: Optional[float] = None
-    avg_by_col: Optional[Dict[str, float]] = None   # avg per numeric column
+    avg_by_col: Optional[Dict[str, float]] = None
     pass_count: int
     fail_count: int
     pass_rate: float
-    # True fairness metrics (require prediction_column)
-    tpr: Optional[float] = None   # TP / (TP + FN)
-    fpr: Optional[float] = None   # FP / (FP + TN)
+    tpr: Optional[float] = None
+    fpr: Optional[float] = None
     accuracy: Optional[float] = None
     confusion: Optional[ConfusionMatrix] = None
 
 
-# ── Metric result ─────────────────────────────────────────────────────────────
+# ── Metric result ────────────────────────────────────────────────────────────
 
 class MetricResult(BaseModel):
     name: str
@@ -63,40 +57,48 @@ class MetricResult(BaseModel):
     threshold: Optional[float] = None
     threshold_direction: str = "below"
     flagged: bool
-    interpretation: str
+    interpretation: str = ""
 
 
-# ── Statistical significance ──────────────────────────────────────────────────
-
-class StatisticalTest(BaseModel):
-    test: str           # "chi_square"
-    statistic: float
-    p_value: float
-    is_significant: bool
-    cramers_v: float = 0.0          # effect size: <0.10 negligible, <0.20 small, <0.40 medium, ≥0.40 large
-    effect_size: str = "unknown"    # "negligible" | "small" | "medium" | "large"
-    interpretation: str
-
-
-# ── Bias origin ───────────────────────────────────────────────────────────────
+# ── Bias origin ──────────────────────────────────────────────────────────────
 
 class BiasOrigin(BaseModel):
     group: str
     metric: str
 
 
-# ── Mitigation results ────────────────────────────────────────────────────────
+# ── Data reliability ─────────────────────────────────────────────────────────
+
+class DataReliability(BaseModel):
+    reliability: str
+    confidence_score: Optional[float] = None
+    warnings: List[str] = []
+
+
+# ── Statistical test ─────────────────────────────────────────────────────────
+
+class StatisticalTest(BaseModel):
+    test: str
+    statistic: float
+    p_value: float
+    is_significant: bool
+    interpretation: str
+    cramers_v: Optional[float] = None
+    effect_size: Optional[str] = None
+
+
+# ── Mitigation ───────────────────────────────────────────────────────────────
 
 class MitigationMethodResult(BaseModel):
     method: str
     bias_score: float
     accuracy: Optional[float] = None
-    tpr_gap: float
-    fpr_gap: float
+    tpr_gap: Optional[float] = None
+    fpr_gap: Optional[float] = None
     dpd: float
     improvement: float
-    final_score: float    # 0.6*bias_reduction + 0.3*accuracy + 0.1*stability; -1 = INVALID
-    description: str
+    final_score: float
+    description: str = ""
 
 
 class MitigationSummary(BaseModel):
@@ -106,19 +108,11 @@ class MitigationSummary(BaseModel):
     best_reason: str
     bias_before: float
     bias_after: float
-    accuracy_after: Optional[float]
-    trade_off_summary: str   # "Bias ↓ 35 pts | Accuracy ↓ 6%"
+    accuracy_after: Optional[float] = None
+    trade_off_summary: str = ""
 
 
-# ── Data reliability ──────────────────────────────────────────────────────────
-
-class DataReliability(BaseModel):
-    reliability: str
-    confidence_score: float
-    warnings: List[str]
-
-
-# ── Main audit response ───────────────────────────────────────────────────────
+# ── Main audit response ──────────────────────────────────────────────────────
 
 class AuditResponse(BaseModel):
     bias_score: float
@@ -146,11 +140,14 @@ class AuditResponse(BaseModel):
     key_findings: List[str]
     recommendations: List[str]
 
-    primary_numeric_column: Optional[str] = None
-    all_numeric_gaps: List[Any] = []
+    audit_summary_json: str
     score_breakdown: Optional[Dict[str, Any]] = None
 
-    audit_summary_json: str
+    plain_language: Dict[str, str] = {}
+    all_numeric_gaps: List[Dict[str, Any]] = []
+    primary_numeric_column: Optional[str] = None
+    sample_rows: List[Dict[str, Any]] = []
+    group_rates_map: Dict[str, float] = {}
 
 
 class ChatResponse(BaseModel):

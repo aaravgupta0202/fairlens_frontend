@@ -51,7 +51,6 @@
 .tab:hover { color: var(--text); background: var(--surface); border-color: var(--border); }
 .tabActive { background: var(--surface) !important; color: var(--primary) !important; border-color: var(--primary) !important; font-weight: 600; }
 .tabAsk { border-color: rgba(232,114,12,.25); color: var(--primary) !important; }
-.tabLabel { }
 .tabBadge { background: var(--red); color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
 
 /* ── Main content ── */

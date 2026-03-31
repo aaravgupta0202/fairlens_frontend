@@ -18,9 +18,9 @@ import styles from './AuditResultsPage.module.css'
 function MetricCard({ metric, plainLang }) {
   const val = metric.value ?? 0
   const thr = metric.threshold ?? 1
-  const pct = metric.threshold_direction === 'above'
-    ? Math.min((val / thr) * 100, 100)
-    : Math.min((val / (thr * 2)) * 100, 100)
+  const scale = Math.max(val, thr) * 1.25 || 1
+  const pct = Math.min((val / scale) * 100, 100)
+  const threshPos = Math.min((thr / scale) * 100, 100)
   return (
     <div className={`${styles.metricCard} ${metric.flagged ? styles.metricFlagged : styles.metricOk}`}>
       <div className={styles.metricHeader}>
@@ -38,7 +38,7 @@ function MetricCard({ metric, plainLang }) {
       <div className={styles.metricTrack}>
         <div className={styles.metricFill} style={{ width: `${pct}%`, background: metric.flagged ? 'var(--red)' : 'var(--green)' }}/>
         {metric.threshold != null && (
-          <div className={styles.metricThresh} style={{ left: metric.threshold_direction === 'above' ? '80%' : '50%' }}/>
+          <div className={styles.metricThresh} style={{ left: `${threshPos}%` }}/>
         )}
       </div>
       {metric.threshold != null && (
@@ -130,11 +130,13 @@ const TABS = [
   { id: 'evidence',     label: 'Evidence',       icon: 'chart'     },
   { id: 'fix',          label: 'Fix Bias',       icon: 'simulation'},
   { id: 'insights',     label: 'AI Insights',    icon: 'insights'  },
-  { id: 'whatif',       label: 'What-If',        icon: 'history'   },
+  { id: 'whatif',       label: 'What-If',        icon: 'analyse'   },
   { id: 'versions',     label: 'Versions',       icon: 'history'   },
   { id: 'transparency', label: 'Transparency',   icon: 'target'    },
   { id: 'ask',          label: 'Ask AI',         icon: 'chat'      },
 ]
+
+const normalizeGroup = v => v === null || v === undefined ? '' : String(v)
 
 // ── Counterfactual Editor ─────────────────────────────────────────────────────
 function CounterfactualEditor({ sampleRows, sensitiveCol, groupRatesMap }) {
@@ -143,14 +145,27 @@ function CounterfactualEditor({ sampleRows, sensitiveCol, groupRatesMap }) {
 
   if (!sampleRows || sampleRows.length === 0) return <p style={{ color: 'var(--text-muted)' }}>No sample data available for what-if analysis.</p>
 
+  const normalizedRates = Object.entries(groupRatesMap || {}).reduce((acc, [k, v]) => {
+    acc[normalizeGroup(k)] = v
+    return acc
+  }, {})
+
+  useEffect(() => {
+    if (selectedRowIndex === null && sampleRows.length > 0) {
+      const initialValue = normalizeGroup(sampleRows[0][sensitiveCol])
+      setSelectedRowIndex(0)
+      setEditedValue(initialValue)
+    }
+  }, [selectedRowIndex, sampleRows, sensitiveCol])
+
   const activeRow = selectedRowIndex !== null ? sampleRows[selectedRowIndex] : null
-  const originalValue = activeRow ? activeRow[sensitiveCol] : null
+  const originalValue = activeRow ? normalizeGroup(activeRow[sensitiveCol]) : ''
   
-  const originalRate = originalValue ? groupRatesMap[originalValue] : null
-  const newRate = editedValue ? groupRatesMap[editedValue] : null
+  const originalRate = originalValue ? normalizedRates[originalValue] : null
+  const newRate = editedValue ? normalizedRates[editedValue] : null
   const diff = (originalRate != null && newRate != null) ? (newRate - originalRate) * 100 : 0
   
-  const availableGroups = Object.keys(groupRatesMap)
+  const availableGroups = Object.keys(normalizedRates)
 
   return (
     <div className={styles.cfContainer}>
@@ -163,8 +178,8 @@ function CounterfactualEditor({ sampleRows, sensitiveCol, groupRatesMap }) {
           </thead>
           <tbody>
             {sampleRows.map((row, i) => (
-              <tr key={i} className={selectedRowIndex === i ? styles.cfActiveRow : ''} onClick={() => { setSelectedRowIndex(i); setEditedValue(row[sensitiveCol]) }}>
-                {Object.values(row).slice(0, 10).map((v, j) => <td key={j}>{String(v)}</td>)}
+              <tr key={i} className={selectedRowIndex === i ? styles.cfActiveRow : ''} onClick={() => { setSelectedRowIndex(i); setEditedValue(normalizeGroup(row[sensitiveCol])) }}>
+                {Object.keys(row).slice(0, 10).map(k => <td key={k}>{String(row[k])}</td>)}
               </tr>
             ))}
           </tbody>
@@ -232,7 +247,7 @@ export default function AuditResultsPage() {
     if (result) {
       try { sessionStorage.setItem('auditResult', JSON.stringify({ result, description: datasetDescription })) } catch {}
     }
-  }, [])
+  }, [result, datasetDescription])
 
   if (!result) return (
     <div className={styles.noResult}>
@@ -258,7 +273,7 @@ export default function AuditResultsPage() {
     group_rates_map = {},
   } = result
 
-  const scoreColor = bias_score < 20 ? 'var(--green)' : bias_score < 45 ? 'var(--amber)' : bias_score < 70 ? '#f97316' : 'var(--red)'
+  const scoreColor = bias_score < 20 ? '#4ade80' : bias_score < 45 ? '#fbbf24' : bias_score < 70 ? '#f97316' : '#f87171'
   const flaggedMetrics = metrics.filter(m => m.flagged)
   const reliabilityData = reliability || { reliability: 'Unknown', confidence_score: null, warnings: [] }
   const reliabilityColor = reliabilityData.reliability === 'High' ? 'var(--green)' : reliabilityData.reliability === 'Medium' ? 'var(--amber)' : reliabilityData.reliability === 'Unknown' ? 'var(--text-muted)' : 'var(--red)'
@@ -340,12 +355,6 @@ export default function AuditResultsPage() {
         </div>
       </header>
 
-      {/* ── Score Strip ── */}
-
-
-
-
-
       {/* ── Tab Bar ── */}
       <div className={styles.tabBar}>
         {TABS.map(t => (
@@ -367,7 +376,7 @@ export default function AuditResultsPage() {
           <div className={styles.tabContent}>
             <div className={styles.summaryHero}>
               <div className={styles.gaugeWrap}>
-                <BiasGauge score={bias_score} level={bias_level}/>
+                <BiasGauge score={bias_score} level={bias_level} confidence={reliabilityData.confidence_score}/>
               </div>
               <div className={styles.summaryHeroInfo}>
                 <div className={styles.riskBadge} style={{ background: scoreColor + '22', color: scoreColor, borderColor: scoreColor + '55' }}>
