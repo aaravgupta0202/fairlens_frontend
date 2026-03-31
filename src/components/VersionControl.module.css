@@ -1,0 +1,95 @@
+.wrap { display:flex; flex-direction:column; gap:16px; }
+
+/* Explainer */
+.explainer { background:linear-gradient(135deg,rgba(232,114,12,.07),rgba(212,150,10,.04)); border:1px solid rgba(232,114,12,.25); border-radius:var(--radius); padding:16px 18px; }
+.explainerSteps { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+@media(max-width:600px){ .explainerSteps { grid-template-columns:1fr; } }
+.explainerStep { display:flex; gap:10px; align-items:flex-start; }
+.explainerNum { width:24px; height:24px; border-radius:50%; background:var(--grad); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.explainerStep strong { display:block; font-size:13px; font-weight:700; margin-bottom:2px; }
+.explainerStep p { font-size:12px; color:var(--text-muted); margin:0; line-height:1.5; }
+
+/* Save card */
+.saveCard { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; }
+.saveCardTitle { font-size:14px; font-weight:700; margin:0 0 4px; }
+.saveCardHint { font-size:12px; color:var(--text-muted); margin:0 0 10px; }
+.saveRow { display:flex; gap:8px; }
+.nameInput { flex:1; background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius-full); padding:9px 14px; color:var(--text); font-size:13px; outline:none; transition:border-color .2s; }
+.nameInput:focus { border-color:var(--primary); }
+.saveBtn { display:flex; align-items:center; gap:6px; background:var(--grad); border:none; color:#fff; padding:9px 18px; border-radius:var(--radius-full); font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.saveBtn:disabled { opacity:.5; cursor:not-allowed; }
+
+/* Empty */
+.empty { background:var(--surface); border:1.5px dashed var(--border); border-radius:var(--radius); padding:36px 24px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; color:var(--text-muted); font-size:13px; line-height:1.6; }
+.empty p { margin:0; }
+
+/* Timeline */
+.timelineCard { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+.timelineTitle { font-size:13px; font-weight:700; margin:0 0 10px; }
+.timelineLegend { display:flex; gap:16px; font-size:11px; margin-top:6px; color:var(--text-muted); }
+
+/* Select hint */
+.selectHint { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); }
+
+/* Version list */
+.versionList { display:flex; flex-direction:column; gap:8px; }
+.versionCard { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; cursor:pointer; transition:all .2s; }
+.versionCard:hover { border-color:var(--primary); }
+.versionCardSelected { border-color:var(--primary); background:rgba(232,114,12,.05); }
+.versionLeft { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
+.selBadge { width:22px; height:22px; border-radius:50%; background:var(--grad); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.versionScore { font-size:22px; font-weight:800; flex-shrink:0; width:46px; font-family:var(--font-display); }
+.versionMeta { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.versionName { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.versionDate { font-size:11px; color:var(--text-muted); }
+.versionDetail { font-size:11px; font-weight:600; }
+.deleteBtn { background:none; border:1px solid var(--border); color:var(--text-muted); width:28px; height:28px; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s; }
+.deleteBtn:hover { border-color:var(--red); color:var(--red); }
+
+/* Compare button */
+.compareBtn { display:flex; align-items:center; justify-content:center; gap:8px; background:var(--grad); border:none; color:#fff; padding:12px 24px; border-radius:var(--radius-full); font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s; box-shadow:var(--shadow-glow); }
+.compareBtn:hover { opacity:.88; }
+
+/* ── Diff Modal ── */
+.diffOverlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; backdrop-filter:blur(4px); }
+.diffModal { background:var(--surface); border:1.5px solid var(--border); border-radius:20px; width:100%; max-width:720px; max-height:90vh; overflow-y:auto; display:flex; flex-direction:column; gap:16px; padding:24px; }
+.diffModalHeader { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.diffModalTitle { font-size:18px; font-weight:800; margin:0 0 4px; }
+.diffModalSub { font-size:12px; color:var(--text-muted); margin:0; }
+.diffModalSub span { color:var(--text-muted); }
+.closeBtn { background:none; border:1px solid var(--border); color:var(--text-muted); width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:14px; flex-shrink:0; transition:all .2s; }
+.closeBtn:hover { border-color:var(--red); color:var(--red); }
+
+/* Narrative */
+.narrative { display:flex; gap:12px; align-items:flex-start; border-radius:12px; padding:14px 16px; border:1px solid; }
+.narrativeGood { background:rgba(74,222,128,.06); border-color:rgba(74,222,128,.3); }
+.narrativeBad  { background:rgba(248,113,113,.06); border-color:rgba(248,113,113,.3); }
+.narrativeIcon { font-size:24px; flex-shrink:0; }
+.narrativePara { font-size:13px; color:var(--text-muted); margin:0 0 4px; line-height:1.6; }
+.narrativePara:last-child { margin:0; }
+
+/* Score delta */
+.scoreDeltaRow { display:flex; align-items:center; gap:8px; }
+.scoreDeltaBox { flex:1; background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.scoreDeltaLabel { font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+.scoreDeltaNum { font-size:32px; font-weight:900; font-family:var(--font-display); line-height:1; }
+.scoreDeltaLevel { font-size:11px; color:var(--text-muted); font-weight:600; }
+.scoreDeltaArrow { display:flex; flex-direction:column; align-items:center; gap:2px; padding:0 8px; }
+.scoreDeltaChange { font-size:22px; font-weight:800; }
+.scoreDeltaChangeSub { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+
+/* Diff tables */
+.diffSection { border-top:1px solid var(--border); padding-top:14px; }
+.diffSectionTitle { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin:0 0 10px; }
+.diffTable { display:flex; flex-direction:column; border:1px solid var(--border); border-radius:10px; overflow:hidden; font-size:12.5px; }
+.diffTableHeader { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1.2fr; padding:8px 12px; background:var(--surface2); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+.diffTableRow { display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1.2fr; padding:9px 12px; border-top:1px solid var(--border); align-items:center; }
+.diffTableRow:hover { background:var(--bg); }
+.diffMetricName { font-weight:600; color:var(--text); }
+.diffVal { color:var(--text-muted); }
+.diffDelta { font-weight:700; }
+.diffStatus { font-size:11px; }
+
+.downloadDiffBtn { display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surface2); border:1.5px solid var(--border); color:var(--text-muted); padding:10px; border-radius:var(--radius-full); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+.downloadDiffBtn:hover { border-color:var(--primary); color:var(--primary); }
+@media(max-width:480px){ .diffTableHeader, .diffTableRow { grid-template-columns:2fr 1fr 1fr 1fr; } .diffTableHeader span:last-child, .diffTableRow span:last-child { display:none; } }

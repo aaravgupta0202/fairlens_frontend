@@ -290,3 +290,182 @@
 .numericGapGroup { font-size: 11.5px; color: var(--text-muted); }
 .numericGapGroup strong { color: var(--text); margin-right: 4px; }
 .numericGapRaw { font-size: 10px; color: var(--text-muted); opacity: .7; margin-top: 2px; }
+
+/* ── Plain-Language Translation ── */
+.plainLangCard {
+  background: var(--surface);
+  border: 1px solid rgba(232,114,12,.25);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plainLangHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.plainLangText {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.7;
+  margin: 0;
+}
+.plainLangText + .plainLangText {
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.plainLangMetric {
+  font-size: 12px;
+  color: var(--primary);
+  line-height: 1.55;
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  background: rgba(232,114,12,.06);
+  border: 1px solid rgba(232,114,12,.15);
+  border-radius: 6px;
+  font-style: normal;
+}
+
+/* ── Counterfactual Editor (What-If Tab) ── */
+.cfContainer {
+  display: flex;
+  gap: 20px;
+  height: 500px;
+}
+.cfTableWrap {
+  flex: 2;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cfTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.cfTable th, .cfTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.cfTable th {
+  background: var(--surface2);
+  color: var(--primary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.cfTable tbody tr {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cfTable tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+.cfActiveRow {
+  background: rgba(232,114,12,0.15) !important;
+  color: var(--primary);
+}
+.cfEditor {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cfEditor h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 18px;
+}
+.cfEditor p {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cfField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cfField label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cfField input, .cfField select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+.cfField input:disabled {
+  opacity: 0.7;
+}
+.cfResult {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.cfRateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.cfRateBox span {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cfRateBox strong {
+  font-size: 24px;
+  color: var(--text);
+}
+.cfArrow {
+  font-size: 24px;
+  color: var(--faint);
+  margin: 0 10px;
+}
+.cfDiff {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--surface2);
+  margin-top: 8px;
+}
+.cfDiffUp {
+  background: rgba(74,222,128,0.1);
+  color: var(--green);
+}
+.cfDiffDown {
+  background: rgba(248,113,113,0.1);
+  color: var(--red);
+}

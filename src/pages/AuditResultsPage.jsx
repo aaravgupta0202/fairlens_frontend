@@ -10,10 +10,12 @@ import { exportAuditToPdf } from '../api/exportPdf'
 import BiasGauge from '../components/BiasGauge'
 import ThemeToggle from '../components/ThemeToggle'
 import Icon from '../components/Icon'
+import VersionCompare from '../components/VersionCompare'
+import BadgeModal from '../components/BadgeModal'
 import styles from './AuditResultsPage.module.css'
 
 // ── Metric Card ───────────────────────────────────────────────────────────────
-function MetricCard({ metric }) {
+function MetricCard({ metric, plainLang }) {
   const val = metric.value ?? 0
   const thr = metric.threshold ?? 1
   const pct = metric.threshold_direction === 'above'
@@ -45,6 +47,7 @@ function MetricCard({ metric }) {
         </div>
       )}
       {metric.interpretation && <p className={styles.metricInterp}>{metric.interpretation}</p>}
+      {plainLang && <p className={styles.plainLangMetric}>{plainLang}</p>}
     </div>
   )
 }
@@ -127,9 +130,80 @@ const TABS = [
   { id: 'evidence',     label: 'Evidence',       icon: 'chart'     },
   { id: 'fix',          label: 'Fix Bias',       icon: 'simulation'},
   { id: 'insights',     label: 'AI Insights',    icon: 'insights'  },
+  { id: 'whatif',       label: 'What-If',        icon: 'history'   },
+  { id: 'versions',     label: 'Versions',       icon: 'history'   },
   { id: 'transparency', label: 'Transparency',   icon: 'target'    },
   { id: 'ask',          label: 'Ask AI',         icon: 'chat'      },
 ]
+
+// ── Counterfactual Editor ─────────────────────────────────────────────────────
+function CounterfactualEditor({ sampleRows, sensitiveCol, groupRatesMap }) {
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null)
+  const [editedValue, setEditedValue] = useState('')
+
+  if (!sampleRows || sampleRows.length === 0) return <p style={{ color: 'var(--text-muted)' }}>No sample data available for what-if analysis.</p>
+
+  const activeRow = selectedRowIndex !== null ? sampleRows[selectedRowIndex] : null
+  const originalValue = activeRow ? activeRow[sensitiveCol] : null
+  
+  const originalRate = originalValue ? groupRatesMap[originalValue] : null
+  const newRate = editedValue ? groupRatesMap[editedValue] : null
+  const diff = (originalRate != null && newRate != null) ? (newRate - originalRate) * 100 : 0
+  
+  const availableGroups = Object.keys(groupRatesMap)
+
+  return (
+    <div className={styles.cfContainer}>
+      <div className={styles.cfTableWrap}>
+        <table className={styles.cfTable}>
+          <thead>
+            <tr>
+              {Object.keys(sampleRows[0]).slice(0, 10).map(k => <th key={k}>{k} {k===sensitiveCol?'(S)':''}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {sampleRows.map((row, i) => (
+              <tr key={i} className={selectedRowIndex === i ? styles.cfActiveRow : ''} onClick={() => { setSelectedRowIndex(i); setEditedValue(row[sensitiveCol]) }}>
+                {Object.values(row).slice(0, 10).map((v, j) => <td key={j}>{String(v)}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {activeRow && (
+        <div className={styles.cfEditor}>
+          <h3>Counterfactual Editor</h3>
+          <p>Modify the sensitive attribute <strong>{sensitiveCol}</strong> for this individual to see how the statistical likelihood of a positive outcome changes based on group disparity data.</p>
+          <div className={styles.cfField}>
+            <label>Original {sensitiveCol}:</label>
+            <input disabled value={originalValue} />
+          </div>
+          <div className={styles.cfField}>
+            <label>Counterfactual {sensitiveCol}:</label>
+            <select value={editedValue} onChange={e => setEditedValue(e.target.value)}>
+              {availableGroups.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div className={styles.cfResult}>
+            <div className={styles.cfRateBox}>
+              <span>Original Likelihood</span>
+              <strong>{originalRate != null ? (originalRate * 100).toFixed(1) + '%' : 'N/A'}</strong>
+            </div>
+            <div className={styles.cfArrow}>→</div>
+            <div className={styles.cfRateBox}>
+              <span>New Likelihood</span>
+              <strong>{newRate != null ? (newRate * 100).toFixed(1) + '%' : 'N/A'}</strong>
+            </div>
+          </div>
+          <div className={`${styles.cfDiff} ${diff > 0 ? styles.cfDiffUp : diff < 0 ? styles.cfDiffDown : ''}`}>
+             Difference: {diff > 0 ? '+' : ''}{diff.toFixed(1)}% 
+             {diff !== 0 && (diff > 0 ? ' (More likely to pass)' : ' (Less likely to pass)')}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function AuditResultsPage() {
@@ -138,6 +212,7 @@ export default function AuditResultsPage() {
   const [activeTab, setActiveTab] = useState('summary')
   const [shareState, setShareState] = useState('idle')
   const [exporting, setExporting] = useState(false)
+  const [showBadgeModal, setShowBadgeModal] = useState(false)
   const [searchParams] = useSearchParams()
 
   let result, datasetDescription
@@ -178,6 +253,9 @@ export default function AuditResultsPage() {
     score_breakdown,
     all_numeric_gaps = [],
     primary_numeric_column,
+    plain_language = {},
+    sample_rows = [],
+    group_rates_map = {},
   } = result
 
   const scoreColor = bias_score < 20 ? 'var(--green)' : bias_score < 45 ? 'var(--amber)' : bias_score < 70 ? '#f97316' : 'var(--red)'
@@ -248,13 +326,16 @@ export default function AuditResultsPage() {
         </div>
         <div className={styles.headerRight}>
           <ThemeToggle/>
+          <button className={styles.actionBtn} onClick={() => setShowBadgeModal(true)}>
+            <Icon name="check" size={13}/> Get Badge
+          </button>
           <button className={styles.actionBtn} onClick={handleShare}>
             {shareState === 'copied'
               ? <><Icon name="check" size={13}/> Copied!</>
               : <><Icon name="share" size={13}/> Share</>}
           </button>
           <button className={styles.actionBtn} onClick={handleExport} disabled={exporting}>
-            <Icon name="pdf" size={13}/> {exporting ? 'Exporting...' : 'PDF'}
+            <Icon name="pdf" size={13}/> {exporting ? 'Generating...' : 'EU Compliance Report'}
           </button>
         </div>
       </header>
@@ -304,6 +385,26 @@ export default function AuditResultsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Plain-Language Summary */}
+            {plain_language.overall && (
+              <div className={styles.plainLangCard}>
+                <div className={styles.plainLangHeader}>
+                  <Icon name="insights" size={16}/>
+                  <span>In Plain English</span>
+                </div>
+                <p className={styles.plainLangText}>{plain_language.overall}</p>
+                {plain_language.demographic_parity_difference && (
+                  <p className={styles.plainLangText}>{plain_language.demographic_parity_difference}</p>
+                )}
+                {plain_language.disparate_impact_ratio && (
+                  <p className={styles.plainLangText}>{plain_language.disparate_impact_ratio}</p>
+                )}
+                {plain_language.statistical_test && (
+                  <p className={styles.plainLangText} style={{opacity: 0.85, fontStyle: 'italic'}}>{plain_language.statistical_test}</p>
+                )}
+              </div>
+            )}
 
             <div className={styles.quickStats}>
               {bias_origin && (
@@ -399,7 +500,7 @@ export default function AuditResultsPage() {
             <h3 className={styles.subTitle}>Key Metrics</h3>
             <div className={styles.metricsGrid}>
               {metrics.filter(m => ['demographic_parity_difference', 'disparate_impact_ratio'].includes(m.key)).map(m => (
-                <MetricCard key={m.key} metric={m}/>
+                <MetricCard key={m.key} metric={m} plainLang={plain_language[m.key]}/>
               ))}
             </div>
 
@@ -473,7 +574,7 @@ export default function AuditResultsPage() {
 
             <h3 className={styles.subTitle}>All Fairness Metrics</h3>
             <div className={styles.metricsGrid}>
-              {metrics.map(m => <MetricCard key={m.key} metric={m}/>)}
+              {metrics.map(m => <MetricCard key={m.key} metric={m} plainLang={plain_language[m.key]}/>)}
             </div>
 
             {group_stats.length > 0 && (
@@ -771,6 +872,28 @@ export default function AuditResultsPage() {
           </div>
         )}
 
+        {/* ══ WHAT-IF EXPERIMENTS ══ */}
+        {activeTab === 'whatif' && (
+          <div className={styles.tabContent}>
+            <h2 className={styles.tabTitle}>Counterfactual Row Editor</h2>
+            <p className={styles.tabDesc}>
+              Select a real record from your dataset and modify its sensitive attributes string to simulate counterfactual fairness decisions based on historical group bias.
+            </p>
+            <CounterfactualEditor sampleRows={sample_rows} sensitiveCol={sensitive_column} groupRatesMap={group_rates_map} />
+          </div>
+        )}
+
+        {/* ══ VERSIONS ══ */}
+        {activeTab === 'versions' && (
+          <div className={styles.tabContent}>
+            <h2 className={styles.tabTitle}>Bias Version Control</h2>
+            <p className={styles.tabDesc}>
+              Compare your current audit against past audits to track fairness progress over time.
+            </p>
+            <VersionCompare currentResult={result} />
+          </div>
+        )}
+
         {/* ══ TRANSPARENCY ══ */}
         {activeTab === 'transparency' && (
           <div className={styles.tabContent}>
@@ -869,6 +992,8 @@ export default function AuditResultsPage() {
         )}
 
       </div>
+      
+      {showBadgeModal && <BadgeModal result={result} onClose={() => setShowBadgeModal(false)} />}
     </div>
   );
 }
