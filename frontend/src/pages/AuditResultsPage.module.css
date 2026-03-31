@@ -468,3 +468,160 @@
   background: rgba(248,113,113,0.1);
   color: var(--red);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — AuditResultsPage (comprehensive overhaul)
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Tablet 768px ── */
+@media (max-width: 768px) {
+  /* Header — stack if too many buttons */
+  .header { padding: 0 12px; height: auto; min-height: 54px; flex-wrap: wrap; gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+  .headerLeft { gap: 8px; }
+  .headerRight { gap: 6px; flex-wrap: wrap; }
+  .logoImg { height: 22px; }
+  .backBtn { padding: 4px 10px; font-size: 12px; gap: 4px; }
+  .actionBtn { padding: 4px 10px; font-size: 12px; gap: 4px; }
+
+  /* Tab bar — always scrollable, hide text labels */
+  .tabBar {
+    padding: 5px 8px;
+    top: auto; /* remove sticky offset — recalculate based on header height */
+    justify-content: flex-start;
+    gap: 2px;
+  }
+  .tab { padding: 6px 10px; font-size: 12px; gap: 3px; }
+  .tabLabel { display: none; } /* icons only on tablet */
+
+  /* Tab content */
+  .tabContent { padding: 16px 14px; gap: 12px; }
+
+  /* Summary hero — stack vertically */
+  .summaryHero { flex-direction: column; gap: 14px; padding: 18px; }
+  .gaugeWrap { width: 120px; align-self: center; }
+  .summaryTitle { font-size: 18px; }
+  .summaryMeta { font-size: 12px; }
+
+  /* Quick stats — 2 columns */
+  .quickStats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .statValue { font-size: 16px; }
+
+  /* Next step buttons — stack */
+  .nextStepRow { flex-direction: column; gap: 8px; }
+  .nextStepBtn, .nextStepBtnSecondary { width: 100%; justify-content: center; padding: 10px; font-size: 13px; }
+
+  /* Metrics grid — 1 column */
+  .metricsGrid { grid-template-columns: 1fr; }
+
+  /* Two-col layout → single col */
+  .twoCol { grid-template-columns: 1fr; }
+
+  /* Transparency grid */
+  .transpGrid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Mitigation */
+  .mitigationGrid { grid-template-columns: 1fr; }
+  .simResultBanner { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px; }
+  .simBannerScore { gap: 10px; }
+  .simBannerNum { font-size: 32px; }
+
+  /* Chat panel */
+  .chatPanel { min-height: 420px; }
+  .chatMessages { padding: 10px; }
+  .chatText { max-width: 90%; font-size: 12.5px; }
+
+  /* Table overflow */
+  .tableWrap { border-radius: var(--radius-sm); }
+  .table { font-size: 12px; }
+  .table th, .table td { padding: 7px 9px; }
+
+  /* Cards */
+  .card { padding: 16px; }
+  .cardTitle { font-size: 13px; }
+
+  /* Tab titles */
+  .tabTitle { font-size: 17px; }
+  .tabSubtitle { font-size: 12px; margin-bottom: 12px; }
+}
+
+/* ── Mobile 480px ── */
+@media (max-width: 480px) {
+  /* Header collapses to minimal */
+  .header { padding: 6px 10px; gap: 6px; }
+  .backBtn { padding: 4px 8px; font-size: 11px; }
+  .actionBtn { padding: 4px 7px; font-size: 11px; gap: 3px; }
+  .logoImg { height: 20px; }
+
+  /* Tab bar — icon only, compact */
+  .tabBar { padding: 4px 6px; gap: 1px; }
+  .tab { padding: 5px 8px; font-size: 11px; border-radius: 6px; }
+  .tabLabel { display: none; }
+  .tabBadge { font-size: 9px; padding: 1px 4px; }
+
+  /* Main content tight padding */
+  .tabContent { padding: 10px 10px; gap: 10px; }
+
+  /* Summary hero */
+  .summaryHero { padding: 14px; gap: 12px; }
+  .gaugeWrap { width: 100px; }
+  .summaryTitle { font-size: 16px; }
+  .riskBadge { font-size: 10px; padding: 3px 10px; }
+
+  /* Stats — still 2 col but smaller */
+  .quickStats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .statCard { padding: 10px 12px; gap: 6px; }
+  .statValue { font-size: 15px; }
+  .statLabel { font-size: 10px; }
+  .statMeta { font-size: 10px; }
+
+  /* Cards */
+  .card { padding: 12px; }
+
+  /* Metric cards */
+  .metricValue { font-size: 20px; }
+  .metricName { font-size: 12px; }
+
+  /* Chat */
+  .chatPanel { min-height: 380px; }
+  .chatSuggestions { display: none; } /* too cramped on mobile */
+  .chatInput { font-size: 13px; padding: 8px 12px; }
+  .chatText { font-size: 12px; padding: 7px 10px; }
+  .chatAvatar { width: 24px; height: 24px; min-width: 24px; font-size: 8px; }
+
+  /* Mitigation */
+  .mitigationStats { grid-template-columns: 1fr; gap: 6px; }
+  .simBannerNum { font-size: 28px; }
+
+  /* Formula box — scroll horizontally */
+  .formulaBox { font-size: 11px; overflow-x: auto; }
+
+  /* Column pills wrap */
+  .columnPills { gap: 5px; }
+  .colPill { font-size: 11px; padding: 4px 9px; }
+
+  /* Transparency grid */
+  .transpGrid { grid-template-columns: 1fr; }
+
+  /* Tab titles */
+  .tabTitle { font-size: 15px; }
+
+  /* Prevent horizontal scroll on main */
+  .main { overflow-x: hidden; }
+
+  /* Cause list */
+  .causeItem { font-size: 13px; }
+
+  /* Tables */
+  .table { font-size: 11px; }
+  .table th, .table td { padding: 6px 8px; }
+}
+
+/* ── Very small 360px ── */
+@media (max-width: 360px) {
+  .header { padding: 5px 8px; }
+  .actionBtn { padding: 3px 6px; font-size: 10.5px; }
+  .backBtn span { display: none; } /* icon only back button */
+  .tabContent { padding: 8px; }
+  .summaryHero { padding: 10px; }
+  .card { padding: 10px; }
+}

@@ -93,3 +93,16 @@
 .downloadDiffBtn { display:flex; align-items:center; justify-content:center; gap:7px; background:var(--surface2); border:1.5px solid var(--border); color:var(--text-muted); padding:10px; border-radius:var(--radius-full); font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
 .downloadDiffBtn:hover { border-color:var(--primary); color:var(--primary); }
 @media(max-width:480px){ .diffTableHeader, .diffTableRow { grid-template-columns:2fr 1fr 1fr 1fr; } .diffTableHeader span:last-child, .diffTableRow span:last-child { display:none; } }
+
+/* ── Additional mobile responsive ── */
+@media (max-width: 480px) {
+  .diffModal { padding: 16px; gap: 12px; }
+  .diffModalTitle { font-size: 15px; }
+  .scoreDeltaNum { font-size: 26px; }
+  .diffTableHeader, .diffTableRow { grid-template-columns: 2fr 1fr 1fr 1fr; }
+  .diffTableHeader span:last-child, .diffTableRow span:last-child { display: none; }
+  .saveRow { flex-direction: column; }
+  .saveBtn { width: 100%; justify-content: center; }
+  .compareBtn { font-size: 13px; padding: 10px 16px; }
+  .versionScore { font-size: 18px; width: 38px; }
+}

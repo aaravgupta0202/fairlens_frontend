@@ -139,3 +139,7 @@
 }
 .item:hover .deleteBtn { opacity: 1; }
 .deleteBtn:hover { color: var(--red); }
+
+@media (max-width: 480px) {
+  .panel { width: 96vw; max-height: 85vh; right: 2vw; top: 8px; }
+}

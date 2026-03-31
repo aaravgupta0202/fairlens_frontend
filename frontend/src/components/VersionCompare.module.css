@@ -179,3 +179,12 @@
 
 .textRed { color: var(--red); }
 .textGreen { color: var(--green); }
+
+@media (max-width: 768px) {
+  .layout { grid-template-columns: 1fr; }
+  .historyList { max-height: 200px; }
+}
+@media (max-width: 480px) {
+  .diffTable { font-size: 11px; }
+  .diffTable th, .diffTable td { padding: 6px 8px; }
+}

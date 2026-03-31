@@ -147,3 +147,68 @@ textarea, input, select { font-family: var(--font); }
   to   { transform: rotate(360deg); }
 }
 .fl-icon svg { display: block; }
+
+/* ── Icon: white on orange/active backgrounds ──────────────────────────────── */
+/* When a button has orange gradient bg (active tab, send button, etc.)
+   the icon should be white, not orange — prevents invisible icon on orange bg. */
+
+/* Active tab buttons */
+button.tabActive .fl-icon,
+[class*="tabActive"] .fl-icon,
+[class*="modeBtnActive"] .fl-icon {
+  color: #ffffff !important;
+}
+
+/* Any button that uses --grad background (orange gradient) */
+button[class*="Btn"]:not(:disabled):active .fl-icon,
+button[class*="btn"]:not(:disabled):active .fl-icon {
+  color: #ffffff !important;
+}
+
+/* Buttons where text is white (means bg is orange/dark) — icon should also be white */
+button[style*="color: white"] .fl-icon,
+button[style*="color:#fff"] .fl-icon,
+button[style*="color: #fff"] .fl-icon {
+  color: #ffffff !important;
+}
+
+/* Chat send button (always orange bg) */
+[class*="chatSend"] .fl-icon { color: #ffffff !important; }
+
+/* Next step / primary action buttons that use var(--grad) */
+[class*="nextStepBtn"] .fl-icon,
+[class*="analyseBtn"] .fl-icon,
+[class*="saveBtn"] .fl-icon,
+[class*="compareBtn"] .fl-icon,
+[class*="track1DownloadBtn"] .fl-icon { color: #ffffff !important; }
+
+/* Mode toggle active button */
+[class*="modeBtnActive"] .fl-icon { color: #ffffff !important; }
+
+/* Tab active — icon becomes white */
+[class*="tabActive"] .fl-icon { color: #ffffff !important; }
+
+/* tabAsk always has primary color text */
+[class*="tabAsk"] .fl-icon { color: var(--primary) !important; }
+[class*="tabAsk"][class*="tabActive"] .fl-icon { color: #ffffff !important; }
+
+/* ── Global mobile utilities ─────────────────────────────────── */
+/* Prevent horizontal overflow on all screens */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 768px) {
+  button { min-height: 36px; }
+  input, select, textarea { font-size: 16px !important; } /* prevents iOS zoom on focus */
+}
+
+/* Smooth scrolling on mobile */
+* { -webkit-overflow-scrolling: touch; }
+
+/* Remove tap highlight on mobile */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
