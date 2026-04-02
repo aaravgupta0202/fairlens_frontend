@@ -1,0 +1,1020 @@
+{
+  "record_id": "ffa25f54-1ef0-4c00-a1db-c0f84b6282a6",
+  "record_version": 1,
+  "deployment_locked": false,
+  "created_at": "2026-04-02T20:04:05+00:00",
+  "updated_at": "2026-04-02T20:04:05+00:00",
+  "integrity_hash": "SHA256:3c3128c2d14531ee43e7ca816e8621266360317f71515a9a705cf772d6570d8d",
+  "export_integrity_hash": "SHA256:3c3128c2d14531ee43e7ca816e8621266360317f71515a9a705cf772d6570d8d",
+  "audit_result": {
+    "bias_score": 83.5,
+    "bias_level": "Critical",
+    "risk_label": "Critical Risk",
+    "bias_detected": true,
+    "total_rows": 40,
+    "columns": [
+      "Name",
+      "Gender",
+      "Grade",
+      "Subject",
+      "Marks",
+      "Pass"
+    ],
+    "sensitive_column": "Gender",
+    "target_column": "Pass",
+    "prediction_column": null,
+    "has_predictions": false,
+    "metrics": [
+      {
+        "name": "Demographic Parity Difference",
+        "key": "demographic_parity_difference",
+        "value": 0.7,
+        "threshold": 0.1,
+        "threshold_direction": "below",
+        "flagged": true,
+        "interpretation": "The Demographic Parity Difference is 0.7000, indicating a substantial difference in selection rates between groups."
+      },
+      {
+        "name": "Disparate Impact Ratio",
+        "key": "disparate_impact_ratio",
+        "value": 0.2632,
+        "threshold": 0.8,
+        "threshold_direction": "above",
+        "flagged": true,
+        "interpretation": "The Disparate Impact Ratio is 0.2632, showing a significant disparity in selection rates across groups."
+      },
+      {
+        "name": "Theil Inequality Index",
+        "key": "theil_index",
+        "value": 0.1814,
+        "threshold": 0.05,
+        "threshold_direction": "below",
+        "flagged": true,
+        "interpretation": "The Theil index is 0.1814, reflecting considerable inequality in outcomes across the sensitive groups."
+      },
+      {
+        "name": "Performance Gap (numeric)",
+        "key": "performance_gap",
+        "value": 0,
+        "threshold": 5,
+        "threshold_direction": "below",
+        "flagged": false,
+        "interpretation": "The Performance Gap is 0.00, indicating no difference in overall performance between groups."
+      }
+    ],
+    "group_stats": [
+      {
+        "group": "Female",
+        "count": 20,
+        "avg_value": 3,
+        "avg_by_col": {
+          "Grade": 3,
+          "Marks": 73.3
+        },
+        "pass_count": 5,
+        "fail_count": 15,
+        "pass_rate": 0.25,
+        "tpr": null,
+        "fpr": null,
+        "accuracy": null,
+        "confusion": null
+      },
+      {
+        "group": "Male",
+        "count": 20,
+        "avg_value": 3,
+        "avg_by_col": {
+          "Grade": 3,
+          "Marks": 87.6
+        },
+        "pass_count": 19,
+        "fail_count": 1,
+        "pass_rate": 0.95,
+        "tpr": null,
+        "fpr": null,
+        "accuracy": null,
+        "confusion": null
+      }
+    ],
+    "statistical_test": {
+      "test": "chi_square",
+      "statistic": 20.4167,
+      "p_value": 6e-06,
+      "is_significant": true,
+      "interpretation": "χ²=20.417, p=0.0000, dof=1.",
+      "cramers_v": 0.7054,
+      "effect_size": "large"
+    },
+    "bias_origin": {
+      "group": "Female",
+      "metric": "Demographic Parity Difference"
+    },
+    "root_causes": [
+      "'Male' has a 70.0% higher selection rate (95.0%) than 'Female' (25.0%).",
+      "Disparate Impact Ratio (0.263) is below the 0.80 legal threshold.",
+      "Theil inequality index of 0.1814 indicates significant outcome inequality across groups."
+    ],
+    "mitigation": {
+      "before_bias_score": 83.5,
+      "results": [
+        {
+          "method": "reweighing",
+          "method_type": "pre-processing",
+          "scenario_reason": null,
+          "selected_by_scenario": false,
+          "selected_by_policy": true,
+          "selected_by_metric_override": false,
+          "selection_badge": null,
+          "bias_score": 0,
+          "accuracy": 0.52,
+          "precision": null,
+          "recall": null,
+          "tpr_gap": null,
+          "fpr_gap": null,
+          "dpd": 0,
+          "dir": 1,
+          "before_dpd": 0.7,
+          "after_dpd": 0,
+          "before_dir": 0.2632,
+          "after_dir": 1,
+          "before_accuracy": null,
+          "after_accuracy": 0.52,
+          "before_precision": null,
+          "after_precision": null,
+          "before_recall": null,
+          "after_recall": null,
+          "improvement": 83.5,
+          "final_score": 0.826,
+          "description": "Reweighing adjusts instance influence across protected groups before model fitting to reduce structural imbalance in outcomes. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        },
+        {
+          "method": "disparate_impact_remover",
+          "method_type": "pre-processing",
+          "scenario_reason": "Dataset domain scenario 'education' detected (confidence=0.67) using dataset description/columns; reweighing is prioritized by domain mitigation policy.",
+          "selected_by_scenario": true,
+          "selected_by_policy": false,
+          "selected_by_metric_override": true,
+          "selection_badge": "metric-overridden",
+          "bias_score": 67.1,
+          "accuracy": 0.618,
+          "precision": null,
+          "recall": null,
+          "tpr_gap": null,
+          "fpr_gap": null,
+          "dpd": 0.28,
+          "dir": 0.6216,
+          "before_dpd": 0.7,
+          "after_dpd": 0.28,
+          "before_dir": 0.2632,
+          "after_dir": 0.6216,
+          "before_accuracy": null,
+          "after_accuracy": 0.618,
+          "before_precision": null,
+          "after_precision": null,
+          "before_recall": null,
+          "after_recall": null,
+          "improvement": 16.4,
+          "final_score": 0.6254,
+          "description": "Disparate Impact Remover repairs group-conditioned outcome distortions to reduce indirect bias patterns. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        },
+        {
+          "method": "threshold_optimisation",
+          "method_type": "post-processing",
+          "scenario_reason": null,
+          "selected_by_scenario": false,
+          "selected_by_policy": false,
+          "selected_by_metric_override": false,
+          "selection_badge": null,
+          "bias_score": 28.8,
+          "accuracy": 0.675,
+          "precision": 0.7391,
+          "recall": 0.7083,
+          "tpr_gap": 0.3684,
+          "fpr_gap": 0.4,
+          "dpd": 0.05,
+          "dir": 0.9167,
+          "before_dpd": 0.7,
+          "after_dpd": 0.05,
+          "before_dir": 0.2632,
+          "after_dir": 0.9167,
+          "before_accuracy": null,
+          "after_accuracy": 0.675,
+          "before_precision": null,
+          "after_precision": 0.7391,
+          "before_recall": null,
+          "after_recall": 0.7083,
+          "improvement": 54.7,
+          "final_score": 0.8126,
+          "description": "Finds the decision threshold per group minimising |rate−60.0%| (global median) + 0.5×(1−accuracy) on model-predicted probabilities. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        },
+        {
+          "method": "reject_option_classification",
+          "method_type": "post-processing",
+          "scenario_reason": null,
+          "selected_by_scenario": false,
+          "selected_by_policy": false,
+          "selected_by_metric_override": false,
+          "selection_badge": null,
+          "bias_score": 86.8,
+          "accuracy": 0.975,
+          "precision": 0.96,
+          "recall": 1,
+          "tpr_gap": 0,
+          "fpr_gap": 1,
+          "dpd": 0.75,
+          "dir": 0.25,
+          "before_dpd": 0.7,
+          "after_dpd": 0.75,
+          "before_dir": 0.2632,
+          "after_dir": 0.25,
+          "before_accuracy": null,
+          "after_accuracy": 0.975,
+          "before_precision": null,
+          "after_precision": 0.96,
+          "before_recall": null,
+          "after_recall": 1,
+          "improvement": -3.3,
+          "final_score": -1,
+          "description": "Reject Option Classification shifts uncertain boundary decisions to favor disadvantaged groups while preserving utility. Fairness did not improve under DPD; accuracy trade-off could not be estimated from available signals. ⚠ Invalid: method did not reduce bias."
+        }
+      ],
+      "best_method": "disparate_impact_remover",
+      "best_reason": "Disparate Impact Remover selected via metric override. Metric gate override: critical DIR violation prioritizes disparate impact repair. (rank=0.625): DPD 0.7000 → 0.2800 (↓0.4200), projected bias 83.5 → 67.1, est. accuracy 61.8%.",
+      "selected_method": "disparate_impact_remover",
+      "selection_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+      "selection_context": {
+        "protected_attribute": "Gender",
+        "selection_rate_spread": 0.7,
+        "dpd": 0.7,
+        "dir": 0.2632,
+        "dataset_imbalance": 0.3333,
+        "has_predictions": false,
+        "scenario": "education",
+        "scenario_confidence": 0.67,
+        "scenario_evidence": [
+          "grade",
+          "student"
+        ],
+        "scenario_source": "dataset_description_and_columns",
+        "policy_profile": {
+          "harm_type": "allocation",
+          "fairness_priority": [
+            "demographic_parity",
+            "equal_opportunity"
+          ],
+          "metric_thresholds": {
+            "dpd_max": 0.1,
+            "dir_min": 0.8,
+            "tpr_gap_max": 0.1,
+            "fpr_gap_max": 0.1
+          },
+          "mitigation_priority": [
+            "reweighing",
+            "threshold_optimisation",
+            "disparate_impact_remover",
+            "reject_option_classification"
+          ],
+          "caveats": "Admissions and scholarship allocation should mitigate historic exclusion while maintaining consistency.",
+          "references": [
+            "EU Charter Art. 14/21",
+            "OECD AI fairness principles"
+          ]
+        },
+        "metric_triggers": {
+          "dpd_severe": true,
+          "dir_critical": true,
+          "tpr_gap_severe": false,
+          "fpr_gap_severe": false
+        },
+        "override_applied": true,
+        "override_method": "disparate_impact_remover",
+        "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+        "policy_selected_method": "reweighing",
+        "final_selected_method": "disparate_impact_remover",
+        "final_selection_source": "metric_override",
+        "decision_trace": [
+          {
+            "layer": "scenario_policy",
+            "scenario": "education",
+            "confidence": 0.67,
+            "evidence": [
+              "grade",
+              "student"
+            ],
+            "policy_selected_method": "reweighing",
+            "reason": "Dataset domain scenario 'education' detected (confidence=0.67) using dataset description/columns; reweighing is prioritized by domain mitigation policy."
+          },
+          {
+            "layer": "metric_gate",
+            "metric_triggers": {
+              "dpd_severe": true,
+              "dir_critical": true,
+              "tpr_gap_severe": false,
+              "fpr_gap_severe": false
+            },
+            "override_applied": true,
+            "override_method": "disparate_impact_remover",
+            "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+            "final_method": "disparate_impact_remover"
+          }
+        ]
+      },
+      "policy_selected_method": "reweighing",
+      "metric_override_method": "disparate_impact_remover",
+      "final_selection_source": "metric_override",
+      "decision_trace": [
+        {
+          "layer": "scenario_policy",
+          "scenario": "education",
+          "confidence": 0.67,
+          "evidence": [
+            "grade",
+            "student"
+          ],
+          "policy_selected_method": "reweighing",
+          "reason": "Dataset domain scenario 'education' detected (confidence=0.67) using dataset description/columns; reweighing is prioritized by domain mitigation policy."
+        },
+        {
+          "layer": "metric_gate",
+          "metric_triggers": {
+            "dpd_severe": true,
+            "dir_critical": true,
+            "tpr_gap_severe": false,
+            "fpr_gap_severe": false
+          },
+          "override_applied": true,
+          "override_method": "disparate_impact_remover",
+          "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+          "final_method": "disparate_impact_remover"
+        }
+      ],
+      "bias_before": 83.5,
+      "bias_after": 67.1,
+      "accuracy_after": 0.618,
+      "trade_off_summary": "Bias changed from 83.5 to 67.1 (↓16.4 pts, 19.6% magnitude). DPD changed 0.7000 → 0.2800; DIR tracked from 0.2632 to 0.6216.  Estimated accuracy after mitigation: 61.8%. Fairness improved under selected metrics. No method guarantees perfect fairness."
+    },
+    "reliability": {
+      "reliability": "Medium",
+      "confidence_score": 45,
+      "warnings": [
+        "Very small dataset (40 rows).",
+        "Group 'Female' has only 20 samples.",
+        "Group 'Male' has only 20 samples."
+      ]
+    },
+    "summary": "The system exhibits critical bias with a score of 83.5, indicating severe fairness concerns. This audit highlights significant disparities in outcomes based on Gender.\n\nSpecifically, Males have a 95.0% pass rate, dramatically higher than Females at 25.0%. This 70.0% difference is a major concern.\n\nKey metrics like Demographic Parity Difference (0.7000) and Disparate Impact Ratio (0.2632) confirm substantial outcome inequality, requiring immediate attention.",
+    "key_findings": [
+      "The overall bias score is 83.5, categorized as Critical.",
+      "Male pass rate is 95.0%, significantly higher than Female pass rate of 25.0%.",
+      "Demographic Parity Difference is 0.7000, indicating a 70.0% disparity.",
+      "Disparate Impact Ratio is 0.2632, falling below the 0.80 threshold.",
+      "Theil inequality index of 0.1814 shows significant outcome inequality."
+    ],
+    "recommendations": [
+      "Investigate root causes for the 25.0% Female pass rate.",
+      "Review and revise criteria to reduce the 0.7000 DPD.",
+      "Implement targeted interventions to improve Female outcomes.",
+      "Continuously monitor fairness metrics for sustained improvement."
+    ],
+    "audit_summary_json": "{\"bias_score\": 83.5, \"bias_level\": \"Critical\", \"sensitive_column\": \"Gender\", \"target_column\": \"Pass\", \"prediction_column\": null, \"has_predictions\": false, \"metrics\": [{\"demographic_parity_difference\": 0.7}, {\"disparate_impact_ratio\": 0.2632}, {\"theil_index\": 0.1814}, {\"performance_gap\": 0}], \"group_stats\": [{\"group\": \"Female\", \"pass_rate\": 0.25, \"tpr\": null, \"fpr\": null}, {\"group\": \"Male\", \"pass_rate\": 0.95, \"tpr\": null, \"fpr\": null}], \"root_causes\": [\"'Male' has a 70.0% higher selection rate (95.0%) than 'Female' (25.0%).\", \"Disparate Impact Ratio (0.263) is below the 0.80 legal threshold.\", \"Theil inequality index of 0.1814 indicates significant outcome inequality across groups.\"], \"key_findings\": [\"The overall bias score is 83.5, categorized as Critical.\", \"Male pass rate is 95.0%, significantly higher than Female pass rate of 25.0%.\", \"Demographic Parity Difference is 0.7000, indicating a 70.0% disparity.\", \"Disparate Impact Ratio is 0.2632, falling below the 0.80 threshold.\", \"Theil inequality index of 0.1814 shows significant outcome inequality.\"], \"reliability\": \"Medium\", \"stat_sig\": true}",
+    "score_breakdown": {
+      "dpd_violation": 100,
+      "dir_violation": 67.1,
+      "tpr_violation": null,
+      "fpr_violation": null,
+      "violations_counted": 2,
+      "label_only_mode": true
+    },
+    "plain_language": {
+      "overall": "This audit reveals critical fairness issues, with a bias score of 83.5. Males pass at a rate of 95.0%, significantly higher than Females at 25.0%, indicating substantial outcome disparities.",
+      "demographic_parity_difference": "There is a 70.0% difference in the pass rates between the Male and Female groups.",
+      "disparate_impact_ratio": "The pass rate for Females is only 26.32% of the pass rate for Males.",
+      "statistical_test": "The observed differences in outcomes between groups are statistically significant.",
+      "theil_index": "The Theil index is 0.1814, reflecting considerable inequality in outcomes across the sensitive groups.",
+      "performance_gap": "The Performance Gap is 0.00, indicating no difference in overall performance between groups."
+    },
+    "all_numeric_gaps": [
+      {
+        "col": "Grade",
+        "gap_pct": 0,
+        "gap_raw": 0,
+        "lo_group": "Female",
+        "lo_avg": 3,
+        "hi_group": "Female",
+        "hi_avg": 3,
+        "avgs": {
+          "Female": 3,
+          "Male": 3
+        }
+      },
+      {
+        "col": "Marks",
+        "gap_pct": 40.9,
+        "gap_raw": 14.3,
+        "lo_group": "Female",
+        "lo_avg": 73.3,
+        "hi_group": "Male",
+        "hi_avg": 87.6,
+        "avgs": {
+          "Female": 73.3,
+          "Male": 87.6
+        }
+      }
+    ],
+    "primary_numeric_column": "Marks",
+    "sample_rows": [
+      {
+        "Name": "Alice",
+        "Gender": "Female",
+        "Grade": 1,
+        "Subject": "Maths",
+        "Marks": 85,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Bob",
+        "Gender": "Male",
+        "Grade": 1,
+        "Subject": "Maths",
+        "Marks": 91,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Carol",
+        "Gender": "Female",
+        "Grade": 1,
+        "Subject": "English",
+        "Marks": 78,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "David",
+        "Gender": "Male",
+        "Grade": 1,
+        "Subject": "English",
+        "Marks": 88,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Eva",
+        "Gender": "Female",
+        "Grade": 1,
+        "Subject": "Science",
+        "Marks": 72,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Frank",
+        "Gender": "Male",
+        "Grade": 1,
+        "Subject": "Science",
+        "Marks": 90,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Grace",
+        "Gender": "Female",
+        "Grade": 1,
+        "Subject": "History",
+        "Marks": 65,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Henry",
+        "Gender": "Male",
+        "Grade": 1,
+        "Subject": "History",
+        "Marks": 84,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Iris",
+        "Gender": "Female",
+        "Grade": 2,
+        "Subject": "Maths",
+        "Marks": 80,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Jake",
+        "Gender": "Male",
+        "Grade": 2,
+        "Subject": "Maths",
+        "Marks": 95,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Karen",
+        "Gender": "Female",
+        "Grade": 2,
+        "Subject": "English",
+        "Marks": 74,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Leo",
+        "Gender": "Male",
+        "Grade": 2,
+        "Subject": "English",
+        "Marks": 83,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Mia",
+        "Gender": "Female",
+        "Grade": 2,
+        "Subject": "Science",
+        "Marks": 69,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Noah",
+        "Gender": "Male",
+        "Grade": 2,
+        "Subject": "Science",
+        "Marks": 88,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Olivia",
+        "Gender": "Female",
+        "Grade": 2,
+        "Subject": "History",
+        "Marks": 60,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Paul",
+        "Gender": "Male",
+        "Grade": 2,
+        "Subject": "History",
+        "Marks": 79,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Quinn",
+        "Gender": "Female",
+        "Grade": 3,
+        "Subject": "Maths",
+        "Marks": 87,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Ryan",
+        "Gender": "Male",
+        "Grade": 3,
+        "Subject": "Maths",
+        "Marks": 92,
+        "Pass": "Pass"
+      },
+      {
+        "Name": "Sara",
+        "Gender": "Female",
+        "Grade": 3,
+        "Subject": "English",
+        "Marks": 76,
+        "Pass": "Fail"
+      },
+      {
+        "Name": "Tom",
+        "Gender": "Male",
+        "Grade": 3,
+        "Subject": "English",
+        "Marks": 89,
+        "Pass": "Pass"
+      }
+    ],
+    "group_rates_map": {
+      "Female": 0.25,
+      "Male": 0.95
+    },
+    "compliance": {
+      "overall": "Red",
+      "articles": {
+        "article_9": {
+          "status": "Red",
+          "reasoning": "Bias score is 83.5, thresholds: amber≥45, red≥70."
+        },
+        "article_10": {
+          "status": "Amber",
+          "reasoning": "DPD 0.7 exceeds 0.1. DIR 0.2632 below 0.8. Theil 0.1814 exceeds 0.05."
+        },
+        "article_11": {
+          "status": "Green",
+          "reasoning": "Technical documentation includes quantitative and narrative evidence."
+        },
+        "article_12": {
+          "status": "Amber",
+          "reasoning": "Automated logging coverage is not verifiable from audit result payload alone."
+        },
+        "article_13": {
+          "status": "Green",
+          "reasoning": "Transparency fields complete."
+        },
+        "article_14": {
+          "status": "Amber",
+          "reasoning": "Human oversight process evidence is not directly attestable from current audit payload."
+        },
+        "article_15": {
+          "status": "Amber",
+          "reasoning": "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete."
+        },
+        "article_17": {
+          "status": "Amber",
+          "reasoning": "QMS governance controls (roles, procedures, corrective actions) require operator-provided process evidence."
+        },
+        "article_19": {
+          "status": "Amber",
+          "reasoning": "Automated log design/retention/access controls are not fully evidenced in current audit payload."
+        },
+        "article_72": {
+          "status": "Amber",
+          "reasoning": "Post-market monitoring cadence, triggers, and incident workflow evidence require deployment-time controls."
+        },
+        "annex_iv": {
+          "status": "Green",
+          "reasoning": "Annex IV core technical documentation sections are materially populated."
+        }
+      },
+      "gap_matrix": [
+        {
+          "article": "Art. 9",
+          "title": "Risk management system",
+          "status": "Red",
+          "score": 0,
+          "rationale": "Bias score is 83.5, thresholds: amber≥45, red≥70.",
+          "evidence": [
+            "bias_score=83.5"
+          ],
+          "gaps": [
+            "Residual fairness risk level is above target thresholds."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A9-001",
+              "priority": "high",
+              "owner": "System Owner / Technical Lead",
+              "type": "product+process",
+              "control": "Implement and track mitigation rollout with measurable acceptance criteria and re-audit gates.",
+              "evidence": "Mitigation implementation record, post-change audit run, rollback plan."
+            }
+          ]
+        },
+        {
+          "article": "Art. 10",
+          "title": "Data and data governance",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "DPD 0.7 exceeds 0.1. DIR 0.2632 below 0.8. Theil 0.1814 exceeds 0.05.",
+          "evidence": [
+            "DPD=0.7",
+            "DIR=0.2632",
+            "Theil=0.1814"
+          ],
+          "gaps": [
+            "DPD 0.7 exceeds 0.1.",
+            "DIR 0.2632 below 0.8.",
+            "Theil 0.1814 exceeds 0.05."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A10-001",
+              "priority": "high",
+              "owner": "Data Governance Lead",
+              "type": "product+process",
+              "control": "Remediate representational imbalance and document provenance/collection safeguards for affected groups.",
+              "evidence": "Dataset card update, rebalancing report, fairness delta before/after."
+            }
+          ]
+        },
+        {
+          "article": "Art. 11",
+          "title": "Technical documentation",
+          "status": "Green",
+          "score": 1,
+          "rationale": "Technical documentation includes quantitative and narrative evidence.",
+          "evidence": [
+            "metrics_present=True",
+            "group_stats_present=True",
+            "narrative_complete=True"
+          ],
+          "gaps": [],
+          "required_controls": []
+        },
+        {
+          "article": "Art. 12",
+          "title": "Record-keeping",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "Automated logging coverage is not verifiable from audit result payload alone.",
+          "evidence": [
+            "Audit payload does not provide full runtime logging attestations."
+          ],
+          "gaps": [
+            "Log completeness and traceability controls need explicit deployment evidence."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A12-001",
+              "priority": "medium",
+              "owner": "MLOps / Platform",
+              "type": "product+process",
+              "control": "Enable immutable decision/event logs with retention, access control, and auditability guarantees.",
+              "evidence": "Log schema, retention policy, access logs, sample trace exports."
+            }
+          ]
+        },
+        {
+          "article": "Art. 13",
+          "title": "Transparency and provision of information",
+          "status": "Green",
+          "score": 1,
+          "rationale": "Transparency fields complete.",
+          "evidence": [
+            "summary=True",
+            "key_findings=True",
+            "recommendations=True"
+          ],
+          "gaps": [],
+          "required_controls": []
+        },
+        {
+          "article": "Art. 14",
+          "title": "Human oversight",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "Human oversight process evidence is not directly attestable from current audit payload.",
+          "evidence": [
+            "No direct oversight workflow proof in current payload."
+          ],
+          "gaps": [
+            "Human intervention/escalation controls need explicit owner, SLA, and override path evidence."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A14-001",
+              "priority": "high",
+              "owner": "Operations Lead",
+              "type": "process",
+              "control": "Define human-review SOP, override procedure, and contestation turnaround SLA.",
+              "evidence": "Signed SOP, runbook, and staffed on-call rota."
+            }
+          ]
+        },
+        {
+          "article": "Art. 15",
+          "title": "Accuracy, robustness and cybersecurity",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete.",
+          "evidence": [
+            "min_accuracy=None",
+            "tpr_gap=None",
+            "fpr_gap=None",
+            "has_predictions=False"
+          ],
+          "gaps": [
+            "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A15-001",
+              "priority": "high",
+              "owner": "ML Engineering",
+              "type": "product+process",
+              "control": "Establish predictive robustness tests and per-group error-rate guardrails with fail-open prevention.",
+              "evidence": "Validation report, threshold policy, CI gate results."
+            }
+          ]
+        },
+        {
+          "article": "Art. 17",
+          "title": "Quality management system",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "QMS governance controls (roles, procedures, corrective actions) require operator-provided process evidence.",
+          "evidence": [
+            "No QMS attestation fields in audit payload."
+          ],
+          "gaps": [
+            "QMS structure and corrective-action governance require documented process controls."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A17-001",
+              "priority": "medium",
+              "owner": "Quality / Compliance",
+              "type": "process",
+              "control": "Implement AI QMS covering roles, procedures, CAPA loop, and release governance.",
+              "evidence": "Approved QMS manual and control register."
+            }
+          ]
+        },
+        {
+          "article": "Art. 19",
+          "title": "Automatically generated logs",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "Automated log design/retention/access controls are not fully evidenced in current audit payload.",
+          "evidence": [
+            "Payload does not prove logging retention/access controls."
+          ],
+          "gaps": [
+            "Operational log integrity and retention controls need explicit proof."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A19-001",
+              "priority": "medium",
+              "owner": "Platform Security",
+              "type": "product+process",
+              "control": "Enforce tamper-evident logs with retention policy, legal hold, and secure access controls.",
+              "evidence": "Retention configuration, access policy, integrity verification sample."
+            }
+          ]
+        },
+        {
+          "article": "Art. 72",
+          "title": "Post-market monitoring",
+          "status": "Amber",
+          "score": 0.5,
+          "rationale": "Post-market monitoring cadence, triggers, and incident workflow evidence require deployment-time controls.",
+          "evidence": [
+            "No deployment monitoring cadence in current payload."
+          ],
+          "gaps": [
+            "Monitoring cadence, alerting thresholds, and incident workflows need deployment evidence."
+          ],
+          "required_controls": [
+            {
+              "id": "CTRL-A72-001",
+              "priority": "high",
+              "owner": "MLOps",
+              "type": "process",
+              "control": "Define post-market monitoring cadence, drift triggers, escalation path, and periodic re-audit protocol.",
+              "evidence": "Monitoring plan, alert playbook, periodic audit schedule."
+            }
+          ]
+        },
+        {
+          "article": "Annex IV",
+          "title": "Technical documentation content",
+          "status": "Green",
+          "score": 1,
+          "rationale": "Annex IV core technical documentation sections are materially populated.",
+          "evidence": [
+            "core_docs=True",
+            "metrics_present=True",
+            "group_stats_present=True"
+          ],
+          "gaps": [],
+          "required_controls": []
+        }
+      ],
+      "compliance_rating": {
+        "score_1_to_10": 5.9,
+        "label": "Weak / major gaps",
+        "rationale": "Rating derived from article matrix status weights (Green=1, Amber=0.5, Red=0). Current distribution: Green=3, Amber=7, Red=1. Primary blockers are red/amber obligations requiring operator process evidence beyond dataset-only metrics.",
+        "method": "Weighted matrix average over Art. 9/10/11/12/13/14/15/17/19/72 + Annex IV",
+        "distribution": {
+          "green": 3,
+          "amber": 7,
+          "red": 1
+        }
+      },
+      "remaining_controls": [
+        {
+          "id": "CTRL-A9-001",
+          "priority": "high",
+          "owner": "System Owner / Technical Lead",
+          "type": "product+process",
+          "control": "Implement and track mitigation rollout with measurable acceptance criteria and re-audit gates.",
+          "evidence": "Mitigation implementation record, post-change audit run, rollback plan.",
+          "article": "Art. 9",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A10-001",
+          "priority": "high",
+          "owner": "Data Governance Lead",
+          "type": "product+process",
+          "control": "Remediate representational imbalance and document provenance/collection safeguards for affected groups.",
+          "evidence": "Dataset card update, rebalancing report, fairness delta before/after.",
+          "article": "Art. 10",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A12-001",
+          "priority": "medium",
+          "owner": "MLOps / Platform",
+          "type": "product+process",
+          "control": "Enable immutable decision/event logs with retention, access control, and auditability guarantees.",
+          "evidence": "Log schema, retention policy, access logs, sample trace exports.",
+          "article": "Art. 12",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A14-001",
+          "priority": "high",
+          "owner": "Operations Lead",
+          "type": "process",
+          "control": "Define human-review SOP, override procedure, and contestation turnaround SLA.",
+          "evidence": "Signed SOP, runbook, and staffed on-call rota.",
+          "article": "Art. 14",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A15-001",
+          "priority": "high",
+          "owner": "ML Engineering",
+          "type": "product+process",
+          "control": "Establish predictive robustness tests and per-group error-rate guardrails with fail-open prevention.",
+          "evidence": "Validation report, threshold policy, CI gate results.",
+          "article": "Art. 15",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A17-001",
+          "priority": "medium",
+          "owner": "Quality / Compliance",
+          "type": "process",
+          "control": "Implement AI QMS covering roles, procedures, CAPA loop, and release governance.",
+          "evidence": "Approved QMS manual and control register.",
+          "article": "Art. 17",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A19-001",
+          "priority": "medium",
+          "owner": "Platform Security",
+          "type": "product+process",
+          "control": "Enforce tamper-evident logs with retention policy, legal hold, and secure access controls.",
+          "evidence": "Retention configuration, access policy, integrity verification sample.",
+          "article": "Art. 19",
+          "status": "open"
+        },
+        {
+          "id": "CTRL-A72-001",
+          "priority": "high",
+          "owner": "MLOps",
+          "type": "process",
+          "control": "Define post-market monitoring cadence, drift triggers, escalation path, and periodic re-audit protocol.",
+          "evidence": "Monitoring plan, alert playbook, periodic audit schedule.",
+          "article": "Art. 72",
+          "status": "open"
+        }
+      ]
+    },
+    "integrity_hash": "SHA256:cb6ac2422f18d201c6949036d44bf4ebe2c5af1141230ba28997b3abfc6cd884",
+    "audit_id": "69d479d9-6162-4aaa-b72c-a5cc22defed2",
+    "compliance_metadata": {}
+  },
+  "compliance_metadata": {
+    "lawful_basis": null,
+    "purpose_of_processing": null,
+    "data_categories": null,
+    "retention_period": null,
+    "dpia_status": null,
+    "dsar_process": null,
+    "dpia_link": null,
+    "dpo_contact": null,
+    "oversight_contact": null,
+    "nca_jurisdiction": null,
+    "monitoring_cadence": null,
+    "monitoring_frequency": null,
+    "escalation_plan": null,
+    "security_assessment_status": null,
+    "annex_confirmation": null,
+    "dataset_name": null,
+    "dataset_version": null,
+    "data_source": null,
+    "collection_method": null,
+    "labeling_method": null,
+    "preprocessing_steps": null,
+    "known_biases": null,
+    "dataset_origin": null,
+    "representativeness_explanation": null,
+    "bias_sources": null,
+    "intended_use": null,
+    "intended_users": null,
+    "system_limitations": null,
+    "known_failure_modes": null,
+    "log_retention_policy": null,
+    "log_storage_location": null,
+    "alert_channel": null,
+    "countersignatures": [],
+    "robustness_validation": {
+      "status": "not_documented",
+      "validator_role": "Technical Lead / Model Developer",
+      "auto_computed": false,
+      "auto_computed_at": "2026-04-02T20:04:05+00:00",
+      "per_group": [],
+      "ood_testing": {
+        "status": "not_documented"
+      },
+      "adversarial_testing": {
+        "status": "not_documented"
+      }
+    }
+  }
+}

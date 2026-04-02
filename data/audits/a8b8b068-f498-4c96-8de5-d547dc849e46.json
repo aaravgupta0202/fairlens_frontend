@@ -1,0 +1,1833 @@
+{
+  "id": "a8b8b068-f498-4c96-8de5-d547dc849e46",
+  "timestamp": "2026-04-02T20:05:24+00:00",
+  "input": {
+    "description": "This is a cricket dataset.",
+    "target_column": "Selection_Decision",
+    "sensitive_column": "Region",
+    "sensitive_column_2": null,
+    "prediction_column": null
+  },
+  "metrics": {
+    "bias_score": 71.8,
+    "metrics": [
+      {
+        "name": "Demographic Parity Difference",
+        "key": "demographic_parity_difference",
+        "value": 0.3281,
+        "threshold": 0.1,
+        "threshold_direction": "below",
+        "flagged": true
+      },
+      {
+        "name": "Disparate Impact Ratio",
+        "key": "disparate_impact_ratio",
+        "value": 0.4513,
+        "threshold": 0.8,
+        "threshold_direction": "above",
+        "flagged": true
+      },
+      {
+        "name": "Theil Inequality Index",
+        "key": "theil_index",
+        "value": 0.055,
+        "threshold": 0.05,
+        "threshold_direction": "below",
+        "flagged": true
+      },
+      {
+        "name": "Performance Gap (numeric)",
+        "key": "performance_gap",
+        "value": 0.68,
+        "threshold": 5.0,
+        "threshold_direction": "below",
+        "flagged": false
+      }
+    ],
+    "mitigation": {
+      "before_bias_score": 71.8,
+      "results": [
+        {
+          "method": "reweighing",
+          "method_type": "pre-processing",
+          "scenario_reason": null,
+          "selected_by_scenario": false,
+          "selected_by_policy": false,
+          "selected_by_metric_override": false,
+          "selection_badge": null,
+          "bias_score": 0.0,
+          "accuracy": 0.5077,
+          "precision": null,
+          "recall": null,
+          "tpr_gap": null,
+          "fpr_gap": null,
+          "dpd": 0.0,
+          "dir": 1.0,
+          "before_dpd": 0.3281,
+          "after_dpd": 0.0,
+          "before_dir": 0.4513,
+          "after_dir": 1.0,
+          "before_accuracy": null,
+          "after_accuracy": 0.5077,
+          "before_precision": null,
+          "after_precision": null,
+          "before_recall": null,
+          "after_recall": null,
+          "improvement": 71.8,
+          "final_score": 0.8223,
+          "description": "Reweighing adjusts instance influence across protected groups before model fitting to reduce structural imbalance in outcomes. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        },
+        {
+          "method": "disparate_impact_remover",
+          "method_type": "pre-processing",
+          "scenario_reason": "Dataset domain scenario 'sports_selection' detected (confidence=0.67) using dataset description/columns; threshold optimisation is prioritized by domain mitigation policy.",
+          "selected_by_scenario": true,
+          "selected_by_policy": false,
+          "selected_by_metric_override": true,
+          "selection_badge": "metric-overridden",
+          "bias_score": 60.9,
+          "accuracy": 0.5228,
+          "precision": null,
+          "recall": null,
+          "tpr_gap": null,
+          "fpr_gap": null,
+          "dpd": 0.1312,
+          "dir": 0.7386,
+          "before_dpd": 0.3281,
+          "after_dpd": 0.1312,
+          "before_dir": 0.4513,
+          "after_dir": 0.7386,
+          "before_accuracy": null,
+          "after_accuracy": 0.5228,
+          "before_precision": null,
+          "after_precision": null,
+          "before_recall": null,
+          "after_recall": null,
+          "improvement": 10.9,
+          "final_score": 0.6054,
+          "description": "Disparate Impact Remover repairs group-conditioned outcome distortions to reduce indirect bias patterns. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        },
+        {
+          "method": "threshold_optimisation",
+          "method_type": "post-processing",
+          "scenario_reason": null,
+          "selected_by_scenario": false,
+          "selected_by_policy": true,
+          "selected_by_metric_override": false,
+          "selection_badge": null,
+          "bias_score": 18.6,
+          "accuracy": 0.653,
+          "precision": 0.6247,
+          "recall": 0.5205,
+          "tpr_gap": 0.0574,
+          "fpr_gap": 0.162,
+          "dpd": 0.0323,
+          "dir": 0.9161,
+          "before_dpd": 0.3281,
+          "after_dpd": 0.0323,
+          "before_dir": 0.4513,
+          "after_dir": 0.9161,
+          "before_accuracy": null,
+          "after_accuracy": 0.653,
+          "before_precision": null,
+          "after_precision": 0.6247,
+          "before_recall": null,
+          "after_recall": 0.5205,
+          "improvement": 53.2,
+          "final_score": 0.7921,
+          "description": "Finds the decision threshold per group minimising |rate−36.3%| (global median) + 0.5×(1−accuracy) on model-predicted probabilities. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        },
+        {
+          "method": "reject_option_classification",
+          "method_type": "post-processing",
+          "scenario_reason": null,
+          "selected_by_scenario": false,
+          "selected_by_policy": false,
+          "selected_by_metric_override": false,
+          "selection_badge": null,
+          "bias_score": 73.7,
+          "accuracy": 0.613,
+          "precision": 0.5676,
+          "recall": 0.4886,
+          "tpr_gap": 0.273,
+          "fpr_gap": 0.3671,
+          "dpd": 0.2621,
+          "dir": 0.4978,
+          "before_dpd": 0.3281,
+          "after_dpd": 0.2621,
+          "before_dir": 0.4513,
+          "after_dir": 0.4978,
+          "before_accuracy": null,
+          "after_accuracy": 0.613,
+          "before_precision": null,
+          "after_precision": 0.5676,
+          "before_recall": null,
+          "after_recall": 0.4886,
+          "improvement": -1.9,
+          "final_score": 0.3829,
+          "description": "Reject Option Classification shifts uncertain boundary decisions to favor disadvantaged groups while preserving utility. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+        }
+      ],
+      "best_method": "disparate_impact_remover",
+      "best_reason": "Disparate Impact Remover selected via metric override. Metric gate override: critical DIR violation prioritizes disparate impact repair. (rank=0.605): DPD 0.3281 → 0.1312 (↓0.1969), projected bias 71.8 → 60.9, est. accuracy 52.3%.",
+      "selected_method": "disparate_impact_remover",
+      "selection_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+      "selection_context": {
+        "protected_attribute": "Region",
+        "selection_rate_spread": 0.3281,
+        "dpd": 0.3281,
+        "dir": 0.4513,
+        "dataset_imbalance": 0.2206,
+        "has_predictions": false,
+        "scenario": "sports_selection",
+        "scenario_confidence": 0.67,
+        "scenario_evidence": [
+          "player",
+          "selection"
+        ],
+        "scenario_source": "dataset_description_and_columns",
+        "policy_profile": {
+          "harm_type": "allocation",
+          "fairness_priority": [
+            "demographic_parity",
+            "disparate_impact"
+          ],
+          "metric_thresholds": {
+            "dpd_max": 0.1,
+            "dir_min": 0.8,
+            "tpr_gap_max": 0.1,
+            "fpr_gap_max": 0.1
+          },
+          "mitigation_priority": [
+            "threshold_optimisation",
+            "reweighing",
+            "disparate_impact_remover",
+            "reject_option_classification"
+          ],
+          "caveats": "Selection trials should minimise access disparity while preserving valid performance signals.",
+          "references": [
+            "IOC inclusion guidance",
+            "80% rule practice"
+          ]
+        },
+        "metric_triggers": {
+          "dpd_severe": true,
+          "dir_critical": true,
+          "tpr_gap_severe": false,
+          "fpr_gap_severe": false
+        },
+        "override_applied": true,
+        "override_method": "disparate_impact_remover",
+        "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+        "policy_selected_method": "threshold_optimisation",
+        "final_selected_method": "disparate_impact_remover",
+        "final_selection_source": "metric_override",
+        "decision_trace": [
+          {
+            "layer": "scenario_policy",
+            "scenario": "sports_selection",
+            "confidence": 0.67,
+            "evidence": [
+              "player",
+              "selection"
+            ],
+            "policy_selected_method": "threshold_optimisation",
+            "reason": "Dataset domain scenario 'sports_selection' detected (confidence=0.67) using dataset description/columns; threshold optimisation is prioritized by domain mitigation policy."
+          },
+          {
+            "layer": "metric_gate",
+            "metric_triggers": {
+              "dpd_severe": true,
+              "dir_critical": true,
+              "tpr_gap_severe": false,
+              "fpr_gap_severe": false
+            },
+            "override_applied": true,
+            "override_method": "disparate_impact_remover",
+            "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+            "final_method": "disparate_impact_remover"
+          }
+        ]
+      },
+      "policy_selected_method": "threshold_optimisation",
+      "metric_override_method": "disparate_impact_remover",
+      "final_selection_source": "metric_override",
+      "decision_trace": [
+        {
+          "layer": "scenario_policy",
+          "scenario": "sports_selection",
+          "confidence": 0.67,
+          "evidence": [
+            "player",
+            "selection"
+          ],
+          "policy_selected_method": "threshold_optimisation",
+          "reason": "Dataset domain scenario 'sports_selection' detected (confidence=0.67) using dataset description/columns; threshold optimisation is prioritized by domain mitigation policy."
+        },
+        {
+          "layer": "metric_gate",
+          "metric_triggers": {
+            "dpd_severe": true,
+            "dir_critical": true,
+            "tpr_gap_severe": false,
+            "fpr_gap_severe": false
+          },
+          "override_applied": true,
+          "override_method": "disparate_impact_remover",
+          "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+          "final_method": "disparate_impact_remover"
+        }
+      ],
+      "bias_before": 71.8,
+      "bias_after": 60.9,
+      "accuracy_after": 0.5228,
+      "trade_off_summary": "Bias changed from 71.8 to 60.9 (↓10.9 pts, 15.2% magnitude). DPD changed 0.3281 → 0.1312; DIR tracked from 0.4513 to 0.7386.  Estimated accuracy after mitigation: 52.3%. Fairness improved under selected metrics. No method guarantees perfect fairness."
+    }
+  },
+  "compliance": {
+    "overall": "Red",
+    "articles": {
+      "article_9": {
+        "status": "Red",
+        "reasoning": "Bias score is 71.8, thresholds: amber≥45, red≥70."
+      },
+      "article_10": {
+        "status": "Amber",
+        "reasoning": "DPD 0.3281 exceeds 0.1. DIR 0.4513 below 0.8. Theil 0.055 exceeds 0.05."
+      },
+      "article_11": {
+        "status": "Green",
+        "reasoning": "Technical documentation includes quantitative and narrative evidence."
+      },
+      "article_12": {
+        "status": "Amber",
+        "reasoning": "Automated logging coverage is not verifiable from audit result payload alone."
+      },
+      "article_13": {
+        "status": "Green",
+        "reasoning": "Transparency fields complete."
+      },
+      "article_14": {
+        "status": "Amber",
+        "reasoning": "Human oversight process evidence is not directly attestable from current audit payload."
+      },
+      "article_15": {
+        "status": "Amber",
+        "reasoning": "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete."
+      },
+      "article_17": {
+        "status": "Amber",
+        "reasoning": "QMS governance controls (roles, procedures, corrective actions) require operator-provided process evidence."
+      },
+      "article_19": {
+        "status": "Amber",
+        "reasoning": "Automated log design/retention/access controls are not fully evidenced in current audit payload."
+      },
+      "article_72": {
+        "status": "Amber",
+        "reasoning": "Post-market monitoring cadence, triggers, and incident workflow evidence require deployment-time controls."
+      },
+      "annex_iv": {
+        "status": "Green",
+        "reasoning": "Annex IV core technical documentation sections are materially populated."
+      }
+    },
+    "gap_matrix": [
+      {
+        "article": "Art. 9",
+        "title": "Risk management system",
+        "status": "Red",
+        "score": 0.0,
+        "rationale": "Bias score is 71.8, thresholds: amber≥45, red≥70.",
+        "evidence": [
+          "bias_score=71.8"
+        ],
+        "gaps": [
+          "Residual fairness risk level is above target thresholds."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A9-001",
+            "priority": "high",
+            "owner": "System Owner / Technical Lead",
+            "type": "product+process",
+            "control": "Implement and track mitigation rollout with measurable acceptance criteria and re-audit gates.",
+            "evidence": "Mitigation implementation record, post-change audit run, rollback plan."
+          }
+        ]
+      },
+      {
+        "article": "Art. 10",
+        "title": "Data and data governance",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "DPD 0.3281 exceeds 0.1. DIR 0.4513 below 0.8. Theil 0.055 exceeds 0.05.",
+        "evidence": [
+          "DPD=0.3281",
+          "DIR=0.4513",
+          "Theil=0.055"
+        ],
+        "gaps": [
+          "DPD 0.3281 exceeds 0.1.",
+          "DIR 0.4513 below 0.8.",
+          "Theil 0.055 exceeds 0.05."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A10-001",
+            "priority": "high",
+            "owner": "Data Governance Lead",
+            "type": "product+process",
+            "control": "Remediate representational imbalance and document provenance/collection safeguards for affected groups.",
+            "evidence": "Dataset card update, rebalancing report, fairness delta before/after."
+          }
+        ]
+      },
+      {
+        "article": "Art. 11",
+        "title": "Technical documentation",
+        "status": "Green",
+        "score": 1.0,
+        "rationale": "Technical documentation includes quantitative and narrative evidence.",
+        "evidence": [
+          "metrics_present=True",
+          "group_stats_present=True",
+          "narrative_complete=True"
+        ],
+        "gaps": [],
+        "required_controls": []
+      },
+      {
+        "article": "Art. 12",
+        "title": "Record-keeping",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "Automated logging coverage is not verifiable from audit result payload alone.",
+        "evidence": [
+          "Audit payload does not provide full runtime logging attestations."
+        ],
+        "gaps": [
+          "Log completeness and traceability controls need explicit deployment evidence."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A12-001",
+            "priority": "medium",
+            "owner": "MLOps / Platform",
+            "type": "product+process",
+            "control": "Enable immutable decision/event logs with retention, access control, and auditability guarantees.",
+            "evidence": "Log schema, retention policy, access logs, sample trace exports."
+          }
+        ]
+      },
+      {
+        "article": "Art. 13",
+        "title": "Transparency and provision of information",
+        "status": "Green",
+        "score": 1.0,
+        "rationale": "Transparency fields complete.",
+        "evidence": [
+          "summary=True",
+          "key_findings=True",
+          "recommendations=True"
+        ],
+        "gaps": [],
+        "required_controls": []
+      },
+      {
+        "article": "Art. 14",
+        "title": "Human oversight",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "Human oversight process evidence is not directly attestable from current audit payload.",
+        "evidence": [
+          "No direct oversight workflow proof in current payload."
+        ],
+        "gaps": [
+          "Human intervention/escalation controls need explicit owner, SLA, and override path evidence."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A14-001",
+            "priority": "high",
+            "owner": "Operations Lead",
+            "type": "process",
+            "control": "Define human-review SOP, override procedure, and contestation turnaround SLA.",
+            "evidence": "Signed SOP, runbook, and staffed on-call rota."
+          }
+        ]
+      },
+      {
+        "article": "Art. 15",
+        "title": "Accuracy, robustness and cybersecurity",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete.",
+        "evidence": [
+          "min_accuracy=None",
+          "tpr_gap=None",
+          "fpr_gap=None",
+          "has_predictions=False"
+        ],
+        "gaps": [
+          "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A15-001",
+            "priority": "high",
+            "owner": "ML Engineering",
+            "type": "product+process",
+            "control": "Establish predictive robustness tests and per-group error-rate guardrails with fail-open prevention.",
+            "evidence": "Validation report, threshold policy, CI gate results."
+          }
+        ]
+      },
+      {
+        "article": "Art. 17",
+        "title": "Quality management system",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "QMS governance controls (roles, procedures, corrective actions) require operator-provided process evidence.",
+        "evidence": [
+          "No QMS attestation fields in audit payload."
+        ],
+        "gaps": [
+          "QMS structure and corrective-action governance require documented process controls."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A17-001",
+            "priority": "medium",
+            "owner": "Quality / Compliance",
+            "type": "process",
+            "control": "Implement AI QMS covering roles, procedures, CAPA loop, and release governance.",
+            "evidence": "Approved QMS manual and control register."
+          }
+        ]
+      },
+      {
+        "article": "Art. 19",
+        "title": "Automatically generated logs",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "Automated log design/retention/access controls are not fully evidenced in current audit payload.",
+        "evidence": [
+          "Payload does not prove logging retention/access controls."
+        ],
+        "gaps": [
+          "Operational log integrity and retention controls need explicit proof."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A19-001",
+            "priority": "medium",
+            "owner": "Platform Security",
+            "type": "product+process",
+            "control": "Enforce tamper-evident logs with retention policy, legal hold, and secure access controls.",
+            "evidence": "Retention configuration, access policy, integrity verification sample."
+          }
+        ]
+      },
+      {
+        "article": "Art. 72",
+        "title": "Post-market monitoring",
+        "status": "Amber",
+        "score": 0.5,
+        "rationale": "Post-market monitoring cadence, triggers, and incident workflow evidence require deployment-time controls.",
+        "evidence": [
+          "No deployment monitoring cadence in current payload."
+        ],
+        "gaps": [
+          "Monitoring cadence, alerting thresholds, and incident workflows need deployment evidence."
+        ],
+        "required_controls": [
+          {
+            "id": "CTRL-A72-001",
+            "priority": "high",
+            "owner": "MLOps",
+            "type": "process",
+            "control": "Define post-market monitoring cadence, drift triggers, escalation path, and periodic re-audit protocol.",
+            "evidence": "Monitoring plan, alert playbook, periodic audit schedule."
+          }
+        ]
+      },
+      {
+        "article": "Annex IV",
+        "title": "Technical documentation content",
+        "status": "Green",
+        "score": 1.0,
+        "rationale": "Annex IV core technical documentation sections are materially populated.",
+        "evidence": [
+          "core_docs=True",
+          "metrics_present=True",
+          "group_stats_present=True"
+        ],
+        "gaps": [],
+        "required_controls": []
+      }
+    ],
+    "compliance_rating": {
+      "score_1_to_10": 5.9,
+      "label": "Weak / major gaps",
+      "rationale": "Rating derived from article matrix status weights (Green=1, Amber=0.5, Red=0). Current distribution: Green=3, Amber=7, Red=1. Primary blockers are red/amber obligations requiring operator process evidence beyond dataset-only metrics.",
+      "method": "Weighted matrix average over Art. 9/10/11/12/13/14/15/17/19/72 + Annex IV",
+      "distribution": {
+        "green": 3,
+        "amber": 7,
+        "red": 1
+      }
+    },
+    "remaining_controls": [
+      {
+        "id": "CTRL-A9-001",
+        "priority": "high",
+        "owner": "System Owner / Technical Lead",
+        "type": "product+process",
+        "control": "Implement and track mitigation rollout with measurable acceptance criteria and re-audit gates.",
+        "evidence": "Mitigation implementation record, post-change audit run, rollback plan.",
+        "article": "Art. 9",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A10-001",
+        "priority": "high",
+        "owner": "Data Governance Lead",
+        "type": "product+process",
+        "control": "Remediate representational imbalance and document provenance/collection safeguards for affected groups.",
+        "evidence": "Dataset card update, rebalancing report, fairness delta before/after.",
+        "article": "Art. 10",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A12-001",
+        "priority": "medium",
+        "owner": "MLOps / Platform",
+        "type": "product+process",
+        "control": "Enable immutable decision/event logs with retention, access control, and auditability guarantees.",
+        "evidence": "Log schema, retention policy, access logs, sample trace exports.",
+        "article": "Art. 12",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A14-001",
+        "priority": "high",
+        "owner": "Operations Lead",
+        "type": "process",
+        "control": "Define human-review SOP, override procedure, and contestation turnaround SLA.",
+        "evidence": "Signed SOP, runbook, and staffed on-call rota.",
+        "article": "Art. 14",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A15-001",
+        "priority": "high",
+        "owner": "ML Engineering",
+        "type": "product+process",
+        "control": "Establish predictive robustness tests and per-group error-rate guardrails with fail-open prevention.",
+        "evidence": "Validation report, threshold policy, CI gate results.",
+        "article": "Art. 15",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A17-001",
+        "priority": "medium",
+        "owner": "Quality / Compliance",
+        "type": "process",
+        "control": "Implement AI QMS covering roles, procedures, CAPA loop, and release governance.",
+        "evidence": "Approved QMS manual and control register.",
+        "article": "Art. 17",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A19-001",
+        "priority": "medium",
+        "owner": "Platform Security",
+        "type": "product+process",
+        "control": "Enforce tamper-evident logs with retention policy, legal hold, and secure access controls.",
+        "evidence": "Retention configuration, access policy, integrity verification sample.",
+        "article": "Art. 19",
+        "status": "open"
+      },
+      {
+        "id": "CTRL-A72-001",
+        "priority": "high",
+        "owner": "MLOps",
+        "type": "process",
+        "control": "Define post-market monitoring cadence, drift triggers, escalation path, and periodic re-audit protocol.",
+        "evidence": "Monitoring plan, alert playbook, periodic audit schedule.",
+        "article": "Art. 72",
+        "status": "open"
+      }
+    ],
+    "integrity_hash": "SHA256:60eeb45471224b591d7a86888e9fcf0cb774420620b3ef1a24247ff2a1ed8a5d",
+    "result": {
+      "bias_score": 71.8,
+      "bias_level": "Critical",
+      "risk_label": "Critical Risk",
+      "bias_detected": true,
+      "total_rows": 1000,
+      "columns": [
+        "Player_ID",
+        "Age",
+        "Region",
+        "Training_Academy",
+        "Matches_Played",
+        "Batting_Average",
+        "Strike_Rate",
+        "Bowling_Economy",
+        "Allrounder_Score",
+        "Fitness_Score",
+        "Selection_Decision"
+      ],
+      "sensitive_column": "Region",
+      "target_column": "Selection_Decision",
+      "prediction_column": null,
+      "has_predictions": false,
+      "metrics": [
+        {
+          "name": "Demographic Parity Difference",
+          "key": "demographic_parity_difference",
+          "value": 0.3281,
+          "threshold": 0.1,
+          "threshold_direction": "below",
+          "flagged": true,
+          "interpretation": "The Demographic Parity Difference of 0.3281 indicates a 32.81% difference in selection rates between groups."
+        },
+        {
+          "name": "Disparate Impact Ratio",
+          "key": "disparate_impact_ratio",
+          "value": 0.4513,
+          "threshold": 0.8,
+          "threshold_direction": "above",
+          "flagged": true,
+          "interpretation": "The Disparate Impact Ratio of 0.4513 shows the least favored group's selection rate is 45.13% of the most favored."
+        },
+        {
+          "name": "Theil Inequality Index",
+          "key": "theil_index",
+          "value": 0.055,
+          "threshold": 0.05,
+          "threshold_direction": "below",
+          "flagged": true,
+          "interpretation": "The Theil Index of 0.0550 quantifies the inequality in selection outcomes across different regions."
+        },
+        {
+          "name": "Performance Gap (numeric)",
+          "key": "performance_gap",
+          "value": 0.68,
+          "threshold": 5.0,
+          "threshold_direction": "below",
+          "flagged": false,
+          "interpretation": "The Performance Gap of 0.68 indicates a significant disparity in overall outcomes across groups."
+        }
+      ],
+      "group_stats": [
+        {
+          "group": "Metro",
+          "count": 408,
+          "avg_value": 25.81,
+          "avg_by_col": {
+            "Age": 25.81,
+            "Matches_Played": 71.8,
+            "Batting_Average": 32.9,
+            "Strike_Rate": 127.07,
+            "Bowling_Economy": 8.11,
+            "Allrounder_Score": 53.56,
+            "Fitness_Score": 66.36
+          },
+          "pass_count": 244,
+          "fail_count": 164,
+          "pass_rate": 0.598,
+          "tpr": null,
+          "fpr": null,
+          "accuracy": null,
+          "confusion": null
+        },
+        {
+          "group": "Rural",
+          "count": 226,
+          "avg_value": 25.13,
+          "avg_by_col": {
+            "Age": 25.13,
+            "Matches_Played": 67.8,
+            "Batting_Average": 33.47,
+            "Strike_Rate": 125.28,
+            "Bowling_Economy": 8.04,
+            "Allrounder_Score": 48.2,
+            "Fitness_Score": 62.32
+          },
+          "pass_count": 61,
+          "fail_count": 165,
+          "pass_rate": 0.2699,
+          "tpr": null,
+          "fpr": null,
+          "accuracy": null,
+          "confusion": null
+        },
+        {
+          "group": "Semi-Urban",
+          "count": 366,
+          "avg_value": 25.78,
+          "avg_by_col": {
+            "Age": 25.78,
+            "Matches_Played": 69.67,
+            "Batting_Average": 32.62,
+            "Strike_Rate": 125.7,
+            "Bowling_Economy": 8.3,
+            "Allrounder_Score": 50.82,
+            "Fitness_Score": 64.64
+          },
+          "pass_count": 133,
+          "fail_count": 233,
+          "pass_rate": 0.3634,
+          "tpr": null,
+          "fpr": null,
+          "accuracy": null,
+          "confusion": null
+        }
+      ],
+      "statistical_test": {
+        "test": "chi_square",
+        "statistic": 76.67,
+        "p_value": 0.0,
+        "is_significant": true,
+        "interpretation": "χ²=76.670, p=0.0000, dof=2.",
+        "cramers_v": 0.2734,
+        "effect_size": "medium"
+      },
+      "bias_origin": {
+        "group": "Rural",
+        "metric": "Disparate Impact Ratio"
+      },
+      "root_causes": [
+        "'Metro' has a 32.8% higher selection rate (59.8%) than 'Rural' (27.0%).",
+        "Disparate Impact Ratio (0.451) is below the 0.80 legal threshold.",
+        "Theil inequality index of 0.0550 indicates significant outcome inequality across groups."
+      ],
+      "mitigation": {
+        "before_bias_score": 71.8,
+        "results": [
+          {
+            "method": "reweighing",
+            "method_type": "pre-processing",
+            "scenario_reason": null,
+            "selected_by_scenario": false,
+            "selected_by_policy": false,
+            "selected_by_metric_override": false,
+            "selection_badge": null,
+            "bias_score": 0.0,
+            "accuracy": 0.5077,
+            "precision": null,
+            "recall": null,
+            "tpr_gap": null,
+            "fpr_gap": null,
+            "dpd": 0.0,
+            "dir": 1.0,
+            "before_dpd": 0.3281,
+            "after_dpd": 0.0,
+            "before_dir": 0.4513,
+            "after_dir": 1.0,
+            "before_accuracy": null,
+            "after_accuracy": 0.5077,
+            "before_precision": null,
+            "after_precision": null,
+            "before_recall": null,
+            "after_recall": null,
+            "improvement": 71.8,
+            "final_score": 0.8223,
+            "description": "Reweighing adjusts instance influence across protected groups before model fitting to reduce structural imbalance in outcomes. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+          },
+          {
+            "method": "disparate_impact_remover",
+            "method_type": "pre-processing",
+            "scenario_reason": "Dataset domain scenario 'sports_selection' detected (confidence=0.67) using dataset description/columns; threshold optimisation is prioritized by domain mitigation policy.",
+            "selected_by_scenario": true,
+            "selected_by_policy": false,
+            "selected_by_metric_override": true,
+            "selection_badge": "metric-overridden",
+            "bias_score": 60.9,
+            "accuracy": 0.5228,
+            "precision": null,
+            "recall": null,
+            "tpr_gap": null,
+            "fpr_gap": null,
+            "dpd": 0.1312,
+            "dir": 0.7386,
+            "before_dpd": 0.3281,
+            "after_dpd": 0.1312,
+            "before_dir": 0.4513,
+            "after_dir": 0.7386,
+            "before_accuracy": null,
+            "after_accuracy": 0.5228,
+            "before_precision": null,
+            "after_precision": null,
+            "before_recall": null,
+            "after_recall": null,
+            "improvement": 10.9,
+            "final_score": 0.6054,
+            "description": "Disparate Impact Remover repairs group-conditioned outcome distortions to reduce indirect bias patterns. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+          },
+          {
+            "method": "threshold_optimisation",
+            "method_type": "post-processing",
+            "scenario_reason": null,
+            "selected_by_scenario": false,
+            "selected_by_policy": true,
+            "selected_by_metric_override": false,
+            "selection_badge": null,
+            "bias_score": 18.6,
+            "accuracy": 0.653,
+            "precision": 0.6247,
+            "recall": 0.5205,
+            "tpr_gap": 0.0574,
+            "fpr_gap": 0.162,
+            "dpd": 0.0323,
+            "dir": 0.9161,
+            "before_dpd": 0.3281,
+            "after_dpd": 0.0323,
+            "before_dir": 0.4513,
+            "after_dir": 0.9161,
+            "before_accuracy": null,
+            "after_accuracy": 0.653,
+            "before_precision": null,
+            "after_precision": 0.6247,
+            "before_recall": null,
+            "after_recall": 0.5205,
+            "improvement": 53.2,
+            "final_score": 0.7921,
+            "description": "Finds the decision threshold per group minimising |rate−36.3%| (global median) + 0.5×(1−accuracy) on model-predicted probabilities. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+          },
+          {
+            "method": "reject_option_classification",
+            "method_type": "post-processing",
+            "scenario_reason": null,
+            "selected_by_scenario": false,
+            "selected_by_policy": false,
+            "selected_by_metric_override": false,
+            "selection_badge": null,
+            "bias_score": 73.7,
+            "accuracy": 0.613,
+            "precision": 0.5676,
+            "recall": 0.4886,
+            "tpr_gap": 0.273,
+            "fpr_gap": 0.3671,
+            "dpd": 0.2621,
+            "dir": 0.4978,
+            "before_dpd": 0.3281,
+            "after_dpd": 0.2621,
+            "before_dir": 0.4513,
+            "after_dir": 0.4978,
+            "before_accuracy": null,
+            "after_accuracy": 0.613,
+            "before_precision": null,
+            "after_precision": 0.5676,
+            "before_recall": null,
+            "after_recall": 0.4886,
+            "improvement": -1.9,
+            "final_score": 0.3829,
+            "description": "Reject Option Classification shifts uncertain boundary decisions to favor disadvantaged groups while preserving utility. Fairness improved under DPD; accuracy trade-off could not be estimated from available signals."
+          }
+        ],
+        "best_method": "disparate_impact_remover",
+        "best_reason": "Disparate Impact Remover selected via metric override. Metric gate override: critical DIR violation prioritizes disparate impact repair. (rank=0.605): DPD 0.3281 → 0.1312 (↓0.1969), projected bias 71.8 → 60.9, est. accuracy 52.3%.",
+        "selected_method": "disparate_impact_remover",
+        "selection_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+        "selection_context": {
+          "protected_attribute": "Region",
+          "selection_rate_spread": 0.3281,
+          "dpd": 0.3281,
+          "dir": 0.4513,
+          "dataset_imbalance": 0.2206,
+          "has_predictions": false,
+          "scenario": "sports_selection",
+          "scenario_confidence": 0.67,
+          "scenario_evidence": [
+            "player",
+            "selection"
+          ],
+          "scenario_source": "dataset_description_and_columns",
+          "policy_profile": {
+            "harm_type": "allocation",
+            "fairness_priority": [
+              "demographic_parity",
+              "disparate_impact"
+            ],
+            "metric_thresholds": {
+              "dpd_max": 0.1,
+              "dir_min": 0.8,
+              "tpr_gap_max": 0.1,
+              "fpr_gap_max": 0.1
+            },
+            "mitigation_priority": [
+              "threshold_optimisation",
+              "reweighing",
+              "disparate_impact_remover",
+              "reject_option_classification"
+            ],
+            "caveats": "Selection trials should minimise access disparity while preserving valid performance signals.",
+            "references": [
+              "IOC inclusion guidance",
+              "80% rule practice"
+            ]
+          },
+          "metric_triggers": {
+            "dpd_severe": true,
+            "dir_critical": true,
+            "tpr_gap_severe": false,
+            "fpr_gap_severe": false
+          },
+          "override_applied": true,
+          "override_method": "disparate_impact_remover",
+          "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+          "policy_selected_method": "threshold_optimisation",
+          "final_selected_method": "disparate_impact_remover",
+          "final_selection_source": "metric_override",
+          "decision_trace": [
+            {
+              "layer": "scenario_policy",
+              "scenario": "sports_selection",
+              "confidence": 0.67,
+              "evidence": [
+                "player",
+                "selection"
+              ],
+              "policy_selected_method": "threshold_optimisation",
+              "reason": "Dataset domain scenario 'sports_selection' detected (confidence=0.67) using dataset description/columns; threshold optimisation is prioritized by domain mitigation policy."
+            },
+            {
+              "layer": "metric_gate",
+              "metric_triggers": {
+                "dpd_severe": true,
+                "dir_critical": true,
+                "tpr_gap_severe": false,
+                "fpr_gap_severe": false
+              },
+              "override_applied": true,
+              "override_method": "disparate_impact_remover",
+              "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+              "final_method": "disparate_impact_remover"
+            }
+          ]
+        },
+        "policy_selected_method": "threshold_optimisation",
+        "metric_override_method": "disparate_impact_remover",
+        "final_selection_source": "metric_override",
+        "decision_trace": [
+          {
+            "layer": "scenario_policy",
+            "scenario": "sports_selection",
+            "confidence": 0.67,
+            "evidence": [
+              "player",
+              "selection"
+            ],
+            "policy_selected_method": "threshold_optimisation",
+            "reason": "Dataset domain scenario 'sports_selection' detected (confidence=0.67) using dataset description/columns; threshold optimisation is prioritized by domain mitigation policy."
+          },
+          {
+            "layer": "metric_gate",
+            "metric_triggers": {
+              "dpd_severe": true,
+              "dir_critical": true,
+              "tpr_gap_severe": false,
+              "fpr_gap_severe": false
+            },
+            "override_applied": true,
+            "override_method": "disparate_impact_remover",
+            "override_reason": "Metric gate override: critical DIR violation prioritizes disparate impact repair.",
+            "final_method": "disparate_impact_remover"
+          }
+        ],
+        "bias_before": 71.8,
+        "bias_after": 60.9,
+        "accuracy_after": 0.5228,
+        "trade_off_summary": "Bias changed from 71.8 to 60.9 (↓10.9 pts, 15.2% magnitude). DPD changed 0.3281 → 0.1312; DIR tracked from 0.4513 to 0.7386.  Estimated accuracy after mitigation: 52.3%. Fairness improved under selected metrics. No method guarantees perfect fairness."
+      },
+      "reliability": {
+        "reliability": "High",
+        "confidence_score": 100.0,
+        "warnings": []
+      },
+      "summary": "The system exhibits a critical bias score of 71.8 with high reliability, indicating significant fairness concerns in selection decisions.\n\nKey disparities include a 32.8% higher selection rate for 'Metro' (59.8%) compared to 'Rural' (27.0%), and a Disparate Impact Ratio of 0.451.\n\nThe Theil index of 0.0550 confirms substantial outcome inequality across 'Metro', 'Rural', and 'Semi-Urban' regions.",
+      "key_findings": [
+        "The overall bias score is 71.8 (Critical), indicating significant fairness issues.",
+        "'Metro' region has a 59.80% selection rate, 32.8% higher than 'Rural' (26.99%).",
+        "The Disparate Impact Ratio is 0.4513, falling below the 0.80 legal threshold.",
+        "The Theil inequality index of 0.0550 confirms significant outcome inequality.",
+        "'Rural' region's selection rate (26.99%) is less than half of 'Metro' (59.80%)."
+      ],
+      "recommendations": [
+        "Investigate the underlying causes for the 32.8% selection rate difference between 'Metro' and 'Rural'.",
+        "Review selection criteria to ensure they do not inadvertently disadvantage 'Rural' and 'Semi-Urban' regions.",
+        "Implement fairness-aware interventions to increase the Disparate Impact Ratio above 0.80.",
+        "Monitor the Theil index to reduce outcome inequality across all 'Region' groups."
+      ],
+      "audit_summary_json": "{\"bias_score\": 71.8, \"bias_level\": \"Critical\", \"sensitive_column\": \"Region\", \"target_column\": \"Selection_Decision\", \"prediction_column\": null, \"has_predictions\": false, \"metrics\": [{\"demographic_parity_difference\": 0.3281}, {\"disparate_impact_ratio\": 0.4513}, {\"theil_index\": 0.055}, {\"performance_gap\": 0.68}], \"group_stats\": [{\"group\": \"Metro\", \"pass_rate\": 0.598, \"tpr\": null, \"fpr\": null}, {\"group\": \"Rural\", \"pass_rate\": 0.2699, \"tpr\": null, \"fpr\": null}, {\"group\": \"Semi-Urban\", \"pass_rate\": 0.3634, \"tpr\": null, \"fpr\": null}], \"root_causes\": [\"'Metro' has a 32.8% higher selection rate (59.8%) than 'Rural' (27.0%).\", \"Disparate Impact Ratio (0.451) is below the 0.80 legal threshold.\", \"Theil inequality index of 0.0550 indicates significant outcome inequality across groups.\"], \"key_findings\": [\"The overall bias score is 71.8 (Critical), indicating significant fairness issues.\", \"'Metro' region has a 59.80% selection rate, 32.8% higher than 'Rural' (26.99%).\", \"The Disparate Impact Ratio is 0.4513, falling below the 0.80 legal threshold.\", \"The Theil inequality index of 0.0550 confirms significant outcome inequality.\", \"'Rural' region's selection rate (26.99%) is less than half of 'Metro' (59.80%).\"], \"reliability\": \"High\", \"stat_sig\": true}",
+      "score_breakdown": {
+        "dpd_violation": 100.0,
+        "dir_violation": 43.6,
+        "tpr_violation": null,
+        "fpr_violation": null,
+        "violations_counted": 2,
+        "label_only_mode": true
+      },
+      "plain_language": {
+        "overall": "The system exhibits critical bias with a score of 71.8, indicating significant unfairness in selection decisions. Specifically, the 'Metro' region is selected at a much higher rate than 'Rural' and 'Semi-Urban' regions. This disparity is substantial and requires immediate attention.",
+        "demographic_parity_difference": "There is a 32.81% difference in selection rates between the most and least favored regions.",
+        "disparate_impact_ratio": "The selection rate for the 'Rural' region is only 45.13% of the 'Metro' region's rate.",
+        "statistical_test": "The observed disparities in selection rates between regions are statistically significant, indicating they are unlikely due to chance.",
+        "theil_index": "The Theil Index of 0.0550 quantifies the inequality in selection outcomes across different regions.",
+        "performance_gap": "The Performance Gap of 0.68 indicates a significant disparity in overall outcomes across groups."
+      },
+      "all_numeric_gaps": [
+        {
+          "col": "Age",
+          "gap_pct": 3.4,
+          "gap_raw": 0.68,
+          "lo_group": "Rural",
+          "lo_avg": 25.13,
+          "hi_group": "Metro",
+          "hi_avg": 25.81,
+          "avgs": {
+            "Metro": 25.81,
+            "Rural": 25.13,
+            "Semi-Urban": 25.78
+          }
+        },
+        {
+          "col": "Matches_Played",
+          "gap_pct": 3.9,
+          "gap_raw": 4.0,
+          "lo_group": "Rural",
+          "lo_avg": 67.8,
+          "hi_group": "Metro",
+          "hi_avg": 71.8,
+          "avgs": {
+            "Metro": 71.8,
+            "Rural": 67.8,
+            "Semi-Urban": 69.67
+          }
+        },
+        {
+          "col": "Batting_Average",
+          "gap_pct": 1.5,
+          "gap_raw": 0.85,
+          "lo_group": "Semi-Urban",
+          "lo_avg": 32.62,
+          "hi_group": "Rural",
+          "hi_avg": 33.47,
+          "avgs": {
+            "Metro": 32.9,
+            "Rural": 33.47,
+            "Semi-Urban": 32.62
+          }
+        },
+        {
+          "col": "Strike_Rate",
+          "gap_pct": 2.0,
+          "gap_raw": 1.79,
+          "lo_group": "Rural",
+          "lo_avg": 125.28,
+          "hi_group": "Metro",
+          "hi_avg": 127.07,
+          "avgs": {
+            "Metro": 127.07,
+            "Rural": 125.28,
+            "Semi-Urban": 125.7
+          }
+        },
+        {
+          "col": "Bowling_Economy",
+          "gap_pct": 3.5,
+          "gap_raw": 0.26,
+          "lo_group": "Rural",
+          "lo_avg": 8.04,
+          "hi_group": "Semi-Urban",
+          "hi_avg": 8.3,
+          "avgs": {
+            "Metro": 8.11,
+            "Rural": 8.04,
+            "Semi-Urban": 8.3
+          }
+        },
+        {
+          "col": "Allrounder_Score",
+          "gap_pct": 5.6,
+          "gap_raw": 5.36,
+          "lo_group": "Rural",
+          "lo_avg": 48.2,
+          "hi_group": "Metro",
+          "hi_avg": 53.56,
+          "avgs": {
+            "Metro": 53.56,
+            "Rural": 48.2,
+            "Semi-Urban": 50.82
+          }
+        },
+        {
+          "col": "Fitness_Score",
+          "gap_pct": 5.5,
+          "gap_raw": 4.04,
+          "lo_group": "Rural",
+          "lo_avg": 62.32,
+          "hi_group": "Metro",
+          "hi_avg": 66.36,
+          "avgs": {
+            "Metro": 66.36,
+            "Rural": 62.32,
+            "Semi-Urban": 64.64
+          }
+        }
+      ],
+      "primary_numeric_column": "Allrounder_Score",
+      "sample_rows": [
+        {
+          "Player_ID": "PLR0001",
+          "Age": 33,
+          "Region": "Metro",
+          "Training_Academy": "Elite",
+          "Matches_Played": 112,
+          "Batting_Average": 24.6,
+          "Strike_Rate": 139.9,
+          "Bowling_Economy": 8.4,
+          "Allrounder_Score": 40,
+          "Fitness_Score": 66,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0002",
+          "Age": 29,
+          "Region": "Semi-Urban",
+          "Training_Academy": "State",
+          "Matches_Played": 89,
+          "Batting_Average": 28.9,
+          "Strike_Rate": 126.1,
+          "Bowling_Economy": 7.97,
+          "Allrounder_Score": 79,
+          "Fitness_Score": 46,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0003",
+          "Age": 30,
+          "Region": "Semi-Urban",
+          "Training_Academy": "State",
+          "Matches_Played": 79,
+          "Batting_Average": 38.0,
+          "Strike_Rate": 132.4,
+          "Bowling_Economy": 7.97,
+          "Allrounder_Score": 60,
+          "Fitness_Score": 59,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0004",
+          "Age": 31,
+          "Region": "Semi-Urban",
+          "Training_Academy": "Local",
+          "Matches_Played": 85,
+          "Batting_Average": 14.6,
+          "Strike_Rate": 88.5,
+          "Bowling_Economy": 7.13,
+          "Allrounder_Score": 50,
+          "Fitness_Score": 64,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0005",
+          "Age": 18,
+          "Region": "Rural",
+          "Training_Academy": "Elite",
+          "Matches_Played": 72,
+          "Batting_Average": 30.4,
+          "Strike_Rate": 106.5,
+          "Bowling_Economy": 5.05,
+          "Allrounder_Score": 18,
+          "Fitness_Score": 61,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0006",
+          "Age": 34,
+          "Region": "Semi-Urban",
+          "Training_Academy": "State",
+          "Matches_Played": 97,
+          "Batting_Average": 33.6,
+          "Strike_Rate": 115.6,
+          "Bowling_Economy": 8.18,
+          "Allrounder_Score": 47,
+          "Fitness_Score": 45,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0007",
+          "Age": 24,
+          "Region": "Semi-Urban",
+          "Training_Academy": "Elite",
+          "Matches_Played": 68,
+          "Batting_Average": 28.1,
+          "Strike_Rate": 144.4,
+          "Bowling_Economy": 7.55,
+          "Allrounder_Score": 53,
+          "Fitness_Score": 76,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0008",
+          "Age": 27,
+          "Region": "Metro",
+          "Training_Academy": "State",
+          "Matches_Played": 76,
+          "Batting_Average": 30.7,
+          "Strike_Rate": 127.3,
+          "Bowling_Economy": 7.57,
+          "Allrounder_Score": 76,
+          "Fitness_Score": 56,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0009",
+          "Age": 30,
+          "Region": "Metro",
+          "Training_Academy": "Local",
+          "Matches_Played": 78,
+          "Batting_Average": 59.7,
+          "Strike_Rate": 124.1,
+          "Bowling_Economy": 6.54,
+          "Allrounder_Score": 53,
+          "Fitness_Score": 60,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0010",
+          "Age": 22,
+          "Region": "Semi-Urban",
+          "Training_Academy": "Elite",
+          "Matches_Played": 75,
+          "Batting_Average": 35.6,
+          "Strike_Rate": 102.2,
+          "Bowling_Economy": 8.31,
+          "Allrounder_Score": 34,
+          "Fitness_Score": 47,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0011",
+          "Age": 27,
+          "Region": "Semi-Urban",
+          "Training_Academy": "Local",
+          "Matches_Played": 56,
+          "Batting_Average": 56.1,
+          "Strike_Rate": 126.0,
+          "Bowling_Economy": 6.68,
+          "Allrounder_Score": 22,
+          "Fitness_Score": 62,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0012",
+          "Age": 29,
+          "Region": "Rural",
+          "Training_Academy": "Elite",
+          "Matches_Played": 92,
+          "Batting_Average": 36.3,
+          "Strike_Rate": 136.1,
+          "Bowling_Economy": 8.3,
+          "Allrounder_Score": 65,
+          "Fitness_Score": 72,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0013",
+          "Age": 25,
+          "Region": "Metro",
+          "Training_Academy": "Local",
+          "Matches_Played": 64,
+          "Batting_Average": 23.9,
+          "Strike_Rate": 135.0,
+          "Bowling_Economy": 7.87,
+          "Allrounder_Score": 29,
+          "Fitness_Score": 72,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0014",
+          "Age": 28,
+          "Region": "Metro",
+          "Training_Academy": "State",
+          "Matches_Played": 79,
+          "Batting_Average": 39.7,
+          "Strike_Rate": 121.0,
+          "Bowling_Economy": 7.75,
+          "Allrounder_Score": 88,
+          "Fitness_Score": 77,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0015",
+          "Age": 18,
+          "Region": "Metro",
+          "Training_Academy": "Elite",
+          "Matches_Played": 64,
+          "Batting_Average": 29.4,
+          "Strike_Rate": 167.9,
+          "Bowling_Economy": 5.56,
+          "Allrounder_Score": 60,
+          "Fitness_Score": 73,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0016",
+          "Age": 20,
+          "Region": "Rural",
+          "Training_Academy": "Local",
+          "Matches_Played": 34,
+          "Batting_Average": 31.6,
+          "Strike_Rate": 100.6,
+          "Bowling_Economy": 8.71,
+          "Allrounder_Score": 36,
+          "Fitness_Score": 50,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0017",
+          "Age": 20,
+          "Region": "Metro",
+          "Training_Academy": "Local",
+          "Matches_Played": 62,
+          "Batting_Average": 10.0,
+          "Strike_Rate": 141.7,
+          "Bowling_Economy": 9.5,
+          "Allrounder_Score": 34,
+          "Fitness_Score": 47,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0018",
+          "Age": 27,
+          "Region": "Semi-Urban",
+          "Training_Academy": "Elite",
+          "Matches_Played": 93,
+          "Batting_Average": 38.9,
+          "Strike_Rate": 101.7,
+          "Bowling_Economy": 7.8,
+          "Allrounder_Score": 80,
+          "Fitness_Score": 84,
+          "Selection_Decision": "Selected"
+        },
+        {
+          "Player_ID": "PLR0019",
+          "Age": 38,
+          "Region": "Rural",
+          "Training_Academy": "Elite",
+          "Matches_Played": 95,
+          "Batting_Average": 29.0,
+          "Strike_Rate": 101.4,
+          "Bowling_Economy": 7.34,
+          "Allrounder_Score": 47,
+          "Fitness_Score": 49,
+          "Selection_Decision": "Rejected"
+        },
+        {
+          "Player_ID": "PLR0020",
+          "Age": 27,
+          "Region": "Metro",
+          "Training_Academy": "Elite",
+          "Matches_Played": 83,
+          "Batting_Average": 48.5,
+          "Strike_Rate": 139.7,
+          "Bowling_Economy": 8.89,
+          "Allrounder_Score": 58,
+          "Fitness_Score": 56,
+          "Selection_Decision": "Selected"
+        }
+      ],
+      "group_rates_map": {
+        "Metro": 0.598,
+        "Rural": 0.2699,
+        "Semi-Urban": 0.3634
+      },
+      "compliance": {
+        "overall": "Red",
+        "articles": {
+          "article_9": {
+            "status": "Red",
+            "reasoning": "Bias score is 71.8, thresholds: amber≥45, red≥70."
+          },
+          "article_10": {
+            "status": "Amber",
+            "reasoning": "DPD 0.3281 exceeds 0.1. DIR 0.4513 below 0.8. Theil 0.055 exceeds 0.05."
+          },
+          "article_11": {
+            "status": "Green",
+            "reasoning": "Technical documentation includes quantitative and narrative evidence."
+          },
+          "article_12": {
+            "status": "Amber",
+            "reasoning": "Automated logging coverage is not verifiable from audit result payload alone."
+          },
+          "article_13": {
+            "status": "Green",
+            "reasoning": "Transparency fields complete."
+          },
+          "article_14": {
+            "status": "Amber",
+            "reasoning": "Human oversight process evidence is not directly attestable from current audit payload."
+          },
+          "article_15": {
+            "status": "Amber",
+            "reasoning": "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete."
+          },
+          "article_17": {
+            "status": "Amber",
+            "reasoning": "QMS governance controls (roles, procedures, corrective actions) require operator-provided process evidence."
+          },
+          "article_19": {
+            "status": "Amber",
+            "reasoning": "Automated log design/retention/access controls are not fully evidenced in current audit payload."
+          },
+          "article_72": {
+            "status": "Amber",
+            "reasoning": "Post-market monitoring cadence, triggers, and incident workflow evidence require deployment-time controls."
+          },
+          "annex_iv": {
+            "status": "Green",
+            "reasoning": "Annex IV core technical documentation sections are materially populated."
+          }
+        },
+        "gap_matrix": [
+          {
+            "article": "Art. 9",
+            "title": "Risk management system",
+            "status": "Red",
+            "score": 0.0,
+            "rationale": "Bias score is 71.8, thresholds: amber≥45, red≥70.",
+            "evidence": [
+              "bias_score=71.8"
+            ],
+            "gaps": [
+              "Residual fairness risk level is above target thresholds."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A9-001",
+                "priority": "high",
+                "owner": "System Owner / Technical Lead",
+                "type": "product+process",
+                "control": "Implement and track mitigation rollout with measurable acceptance criteria and re-audit gates.",
+                "evidence": "Mitigation implementation record, post-change audit run, rollback plan."
+              }
+            ]
+          },
+          {
+            "article": "Art. 10",
+            "title": "Data and data governance",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "DPD 0.3281 exceeds 0.1. DIR 0.4513 below 0.8. Theil 0.055 exceeds 0.05.",
+            "evidence": [
+              "DPD=0.3281",
+              "DIR=0.4513",
+              "Theil=0.055"
+            ],
+            "gaps": [
+              "DPD 0.3281 exceeds 0.1.",
+              "DIR 0.4513 below 0.8.",
+              "Theil 0.055 exceeds 0.05."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A10-001",
+                "priority": "high",
+                "owner": "Data Governance Lead",
+                "type": "product+process",
+                "control": "Remediate representational imbalance and document provenance/collection safeguards for affected groups.",
+                "evidence": "Dataset card update, rebalancing report, fairness delta before/after."
+              }
+            ]
+          },
+          {
+            "article": "Art. 11",
+            "title": "Technical documentation",
+            "status": "Green",
+            "score": 1.0,
+            "rationale": "Technical documentation includes quantitative and narrative evidence.",
+            "evidence": [
+              "metrics_present=True",
+              "group_stats_present=True",
+              "narrative_complete=True"
+            ],
+            "gaps": [],
+            "required_controls": []
+          },
+          {
+            "article": "Art. 12",
+            "title": "Record-keeping",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "Automated logging coverage is not verifiable from audit result payload alone.",
+            "evidence": [
+              "Audit payload does not provide full runtime logging attestations."
+            ],
+            "gaps": [
+              "Log completeness and traceability controls need explicit deployment evidence."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A12-001",
+                "priority": "medium",
+                "owner": "MLOps / Platform",
+                "type": "product+process",
+                "control": "Enable immutable decision/event logs with retention, access control, and auditability guarantees.",
+                "evidence": "Log schema, retention policy, access logs, sample trace exports."
+              }
+            ]
+          },
+          {
+            "article": "Art. 13",
+            "title": "Transparency and provision of information",
+            "status": "Green",
+            "score": 1.0,
+            "rationale": "Transparency fields complete.",
+            "evidence": [
+              "summary=True",
+              "key_findings=True",
+              "recommendations=True"
+            ],
+            "gaps": [],
+            "required_controls": []
+          },
+          {
+            "article": "Art. 14",
+            "title": "Human oversight",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "Human oversight process evidence is not directly attestable from current audit payload.",
+            "evidence": [
+              "No direct oversight workflow proof in current payload."
+            ],
+            "gaps": [
+              "Human intervention/escalation controls need explicit owner, SLA, and override path evidence."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A14-001",
+                "priority": "high",
+                "owner": "Operations Lead",
+                "type": "process",
+                "control": "Define human-review SOP, override procedure, and contestation turnaround SLA.",
+                "evidence": "Signed SOP, runbook, and staffed on-call rota."
+              }
+            ]
+          },
+          {
+            "article": "Art. 15",
+            "title": "Accuracy, robustness and cybersecurity",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete.",
+            "evidence": [
+              "min_accuracy=None",
+              "tpr_gap=None",
+              "fpr_gap=None",
+              "has_predictions=False"
+            ],
+            "gaps": [
+              "Prediction-column evidence is missing, so full robustness/error-rate parity checks are incomplete."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A15-001",
+                "priority": "high",
+                "owner": "ML Engineering",
+                "type": "product+process",
+                "control": "Establish predictive robustness tests and per-group error-rate guardrails with fail-open prevention.",
+                "evidence": "Validation report, threshold policy, CI gate results."
+              }
+            ]
+          },
+          {
+            "article": "Art. 17",
+            "title": "Quality management system",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "QMS governance controls (roles, procedures, corrective actions) require operator-provided process evidence.",
+            "evidence": [
+              "No QMS attestation fields in audit payload."
+            ],
+            "gaps": [
+              "QMS structure and corrective-action governance require documented process controls."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A17-001",
+                "priority": "medium",
+                "owner": "Quality / Compliance",
+                "type": "process",
+                "control": "Implement AI QMS covering roles, procedures, CAPA loop, and release governance.",
+                "evidence": "Approved QMS manual and control register."
+              }
+            ]
+          },
+          {
+            "article": "Art. 19",
+            "title": "Automatically generated logs",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "Automated log design/retention/access controls are not fully evidenced in current audit payload.",
+            "evidence": [
+              "Payload does not prove logging retention/access controls."
+            ],
+            "gaps": [
+              "Operational log integrity and retention controls need explicit proof."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A19-001",
+                "priority": "medium",
+                "owner": "Platform Security",
+                "type": "product+process",
+                "control": "Enforce tamper-evident logs with retention policy, legal hold, and secure access controls.",
+                "evidence": "Retention configuration, access policy, integrity verification sample."
+              }
+            ]
+          },
+          {
+            "article": "Art. 72",
+            "title": "Post-market monitoring",
+            "status": "Amber",
+            "score": 0.5,
+            "rationale": "Post-market monitoring cadence, triggers, and incident workflow evidence require deployment-time controls.",
+            "evidence": [
+              "No deployment monitoring cadence in current payload."
+            ],
+            "gaps": [
+              "Monitoring cadence, alerting thresholds, and incident workflows need deployment evidence."
+            ],
+            "required_controls": [
+              {
+                "id": "CTRL-A72-001",
+                "priority": "high",
+                "owner": "MLOps",
+                "type": "process",
+                "control": "Define post-market monitoring cadence, drift triggers, escalation path, and periodic re-audit protocol.",
+                "evidence": "Monitoring plan, alert playbook, periodic audit schedule."
+              }
+            ]
+          },
+          {
+            "article": "Annex IV",
+            "title": "Technical documentation content",
+            "status": "Green",
+            "score": 1.0,
+            "rationale": "Annex IV core technical documentation sections are materially populated.",
+            "evidence": [
+              "core_docs=True",
+              "metrics_present=True",
+              "group_stats_present=True"
+            ],
+            "gaps": [],
+            "required_controls": []
+          }
+        ],
+        "compliance_rating": {
+          "score_1_to_10": 5.9,
+          "label": "Weak / major gaps",
+          "rationale": "Rating derived from article matrix status weights (Green=1, Amber=0.5, Red=0). Current distribution: Green=3, Amber=7, Red=1. Primary blockers are red/amber obligations requiring operator process evidence beyond dataset-only metrics.",
+          "method": "Weighted matrix average over Art. 9/10/11/12/13/14/15/17/19/72 + Annex IV",
+          "distribution": {
+            "green": 3,
+            "amber": 7,
+            "red": 1
+          }
+        },
+        "remaining_controls": [
+          {
+            "id": "CTRL-A9-001",
+            "priority": "high",
+            "owner": "System Owner / Technical Lead",
+            "type": "product+process",
+            "control": "Implement and track mitigation rollout with measurable acceptance criteria and re-audit gates.",
+            "evidence": "Mitigation implementation record, post-change audit run, rollback plan.",
+            "article": "Art. 9",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A10-001",
+            "priority": "high",
+            "owner": "Data Governance Lead",
+            "type": "product+process",
+            "control": "Remediate representational imbalance and document provenance/collection safeguards for affected groups.",
+            "evidence": "Dataset card update, rebalancing report, fairness delta before/after.",
+            "article": "Art. 10",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A12-001",
+            "priority": "medium",
+            "owner": "MLOps / Platform",
+            "type": "product+process",
+            "control": "Enable immutable decision/event logs with retention, access control, and auditability guarantees.",
+            "evidence": "Log schema, retention policy, access logs, sample trace exports.",
+            "article": "Art. 12",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A14-001",
+            "priority": "high",
+            "owner": "Operations Lead",
+            "type": "process",
+            "control": "Define human-review SOP, override procedure, and contestation turnaround SLA.",
+            "evidence": "Signed SOP, runbook, and staffed on-call rota.",
+            "article": "Art. 14",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A15-001",
+            "priority": "high",
+            "owner": "ML Engineering",
+            "type": "product+process",
+            "control": "Establish predictive robustness tests and per-group error-rate guardrails with fail-open prevention.",
+            "evidence": "Validation report, threshold policy, CI gate results.",
+            "article": "Art. 15",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A17-001",
+            "priority": "medium",
+            "owner": "Quality / Compliance",
+            "type": "process",
+            "control": "Implement AI QMS covering roles, procedures, CAPA loop, and release governance.",
+            "evidence": "Approved QMS manual and control register.",
+            "article": "Art. 17",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A19-001",
+            "priority": "medium",
+            "owner": "Platform Security",
+            "type": "product+process",
+            "control": "Enforce tamper-evident logs with retention policy, legal hold, and secure access controls.",
+            "evidence": "Retention configuration, access policy, integrity verification sample.",
+            "article": "Art. 19",
+            "status": "open"
+          },
+          {
+            "id": "CTRL-A72-001",
+            "priority": "high",
+            "owner": "MLOps",
+            "type": "process",
+            "control": "Define post-market monitoring cadence, drift triggers, escalation path, and periodic re-audit protocol.",
+            "evidence": "Monitoring plan, alert playbook, periodic audit schedule.",
+            "article": "Art. 72",
+            "status": "open"
+          }
+        ]
+      },
+      "integrity_hash": "SHA256:60eeb45471224b591d7a86888e9fcf0cb774420620b3ef1a24247ff2a1ed8a5d",
+      "audit_id": null
+    }
+  },
+  "hash": "SHA256:7933a0a99004f0679ba9a76654aab3adaad45c35bcf6ec8c5b32306caab79f17"
+}
