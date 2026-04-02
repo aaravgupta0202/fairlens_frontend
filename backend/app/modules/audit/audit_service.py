@@ -49,6 +49,21 @@ from app.schemas.audit_schema import (
 )
 from app.modules.audit.eu_ai_act_service import evaluate_eu_ai_act
 from app.modules.audit.storage import JSONStorageManager
+from app.modules.audit.fairness.metrics import (
+    demographic_parity, disparate_impact as di_metric,
+    equal_opportunity, equalized_odds, statistical_parity_difference,
+    theil_index as theil_metric, compute_bias_score,
+)
+from app.modules.audit.fairness.bias_layers import (
+    dataset_bias as layer_dataset_bias,
+    model_bias as layer_model_bias,
+    outcome_bias as layer_outcome_bias,
+)
+from app.modules.audit.fairness.reweighing import apply_reweighing
+from app.modules.audit.fairness.threshold import find_group_thresholds
+from app.modules.audit.fairness.evaluation import (
+    evaluate_baseline, build_comparison_table, select_best_method,
+)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -1051,45 +1066,37 @@ def _scenario_weighted_bias_score(
 
 
 def _method_reweighing(df, computed):
+    """
+    Reweighing using the correct Kamiran-Calders (2012) formula:
+        w(A=a, Y=y) = P(A=a) * P(Y=y) / P(A=a, Y=y)
+    Delegates to fairness/reweighing.py for math correctness.
+    """
     try:
         sc = computed["sensitive_col"]; tc = computed["target_col"]
         pc = computed["positive_class"]; gs = computed["group_stats"]
         if not sc or not tc or pc is None:
             return {"method": "reweighing", "error": "insufficient columns"}
-        total = len(df)
-        p_y = {y: len(df[df[tc]==y])/total for y in df[tc].dropna().unique()}
-        p_g = {str(g): len(df[df[sc]==g])/total for g in df[sc].dropna().unique()}
-        p_gy = {}
-        for g in df[sc].dropna().unique():
-            for y in df[tc].dropna().unique():
-                p_gy[(str(g),y)] = len(df[(df[sc]==g)&(df[tc]==y)])/total
-        def get_w(row):
-            g = str(row[sc]) if pd.notna(row[sc]) else None
-            y = row[tc] if pd.notna(row[tc]) else None
-            if g is None or y is None: return 1.0
-            d = p_gy.get((g,y), 0)
-            return (p_y.get(y,0)*p_g.get(g,0))/d if d > 0 else 1.0
-        df2 = df.copy(); df2["_w"] = df2.apply(get_w, axis=1)
-        new_rates = []
-        for g_s in gs:
-            g = g_s["group"]
-            gdf = df2[df2[sc].astype(str)==g]; w = gdf["_w"]
-            if w.sum() == 0: new_rates.append(g_s["pass_rate"]); continue
-            wpr = float((w*(gdf[tc]==pc)).sum()/w.sum())
-            new_rates.append(round(max(0.0,min(1.0,wpr)),4))
-        acc = _compute_expected_accuracy(gs, new_rates)
-        # bias score recomputed below from dpd/dir after adjustment — _bias_score_from_rates not used here
-        dpd_after, dir_after = _compute_dpd_dir_from_rates(new_rates)
-        return {"method":"reweighing","method_type":"pre-processing","accuracy":acc,"precision":None,"recall":None,"dpd":dpd_after,"dir":dir_after,
-                "tpr_gap":None,"fpr_gap":None,"adjusted_rates":new_rates}
+        result = apply_reweighing(df, sc, tc, pc, gs)
+        if "error" in result:
+            return result
+        adj_rates = result["adjusted_rates"]
+        dpd_after = result["dpd"]; dir_after = result["dir"]
+        acc = _compute_expected_accuracy(gs, adj_rates)
+        result["accuracy"] = acc
+        return result
     except (ValueError, KeyError, pd.errors.MergeError) as e:
-        return {"method":"reweighing","error":str(e)}
+        return {"method": "reweighing", "error": str(e)}
     except Exception:
         logger.exception("Unexpected error in reweighing mitigation")
-        return {"method":"reweighing","error":"Internal error — see server logs"}
+        return {"method": "reweighing", "error": "Internal error — see server logs"}
 
 
 def _method_threshold_optimisation(df, computed, lambda_acc=0.5):
+    """
+    Threshold optimization using fairness/threshold.py.
+    Finds per-group thresholds that equalize selection rates (DP post-processing).
+    Also evaluates global threshold as a comparison point.
+    """
     try:
         from sklearn.linear_model import LogisticRegression
         from sklearn.pipeline import Pipeline
@@ -1098,71 +1105,66 @@ def _method_threshold_optimisation(df, computed, lambda_acc=0.5):
         sc = computed["sensitive_col"]; tc = computed["target_col"]
         pc = computed["positive_class"]; gs = computed["group_stats"]
         if not sc or not tc or pc is None:
-            return {"method":"threshold_optimisation","error":"insufficient columns"}
+            return {"method": "threshold_optimisation", "error": "insufficient columns"}
 
         X, y, sensitive = _prepare_training_frame(df, computed)
         if X is None or y is None or sensitive is None:
-            return {"method":"threshold_optimisation","error":"insufficient columns"}
+            return {"method": "threshold_optimisation", "error": "insufficient columns"}
         if len(np.unique(y)) < 2:
-            return {"method":"threshold_optimisation","error":"target column has only one class"}
+            return {"method": "threshold_optimisation", "error": "target column has only one class"}
 
-        base_model = Pipeline([
+        model = Pipeline([
             ("scaler", StandardScaler()),
             ("lr", LogisticRegression(max_iter=1000, solver="lbfgs")),
         ])
-        base_model.fit(X, y)
-        y_prob = base_model.predict_proba(X)[:, 1]
+        model.fit(X, y)
+        y_prob = model.predict_proba(X)[:, 1]
+        y_np   = np.array(y, dtype=int)
+        sens_np = np.array(sensitive.values, dtype=str)
 
-        rates = [g["pass_rate"] for g in gs]
-        global_target = float(np.median(rates)) if rates else 0.5
-        group_thresholds = {}
-        group_order = sorted(sensitive.unique(), key=str)
+        # Use group-specific threshold search (DP post-processing)
+        result = find_group_thresholds(
+            y_prob=y_prob,
+            y_true=y_np,
+            sensitive=sens_np,
+            lambda_acc=lambda_acc,
+        )
 
-        for grp in group_order:
-            mask = sensitive.astype(str) == str(grp)
-            if int(mask.sum()) == 0:
-                continue
-            gp = y_prob[mask]
-            gy = np.array(y[mask], dtype=int)
-            best_t = 0.5
-            best_loss = float("inf")
-            for t in np.arange(0.02, 0.981, 0.02):
-                pred = (gp >= float(t)).astype(int)
-                adj_rate = float(np.mean(pred == 1))
-                acc_t = float(np.mean(pred == gy))
-                loss = abs(adj_rate - global_target) + lambda_acc * (1.0 - acc_t)
-                if loss < best_loss:
-                    best_loss = loss
-                    best_t = float(t)
-            group_thresholds[str(grp)] = round(best_t, 2)
+        adj_rates   = result["adjusted_rates"]
+        dpd_after   = result["dpd_after"]
+        dir_after   = result["dir_after"]
+        acc_after   = result["accuracy_after"]
+        tpr_gap_val = result.get("tpr_gap_after")
+        fpr_gap_val = result.get("fpr_gap_after")
 
-        if not group_thresholds:
-            return {"method":"threshold_optimisation","error":"no groups processed"}
-
+        prec = rec = None
+        # Compute precision/recall from final predictions
+        group_thresholds = result["group_thresholds"]
         y_hat = np.zeros(len(y_prob), dtype=int)
         for grp, t in group_thresholds.items():
-            mask = sensitive.astype(str) == str(grp)
-            y_hat[mask] = (y_prob[mask] >= float(t)).astype(int)
+            mask = sens_np == str(grp)
+            y_hat[mask] = (y_prob[mask] >= t).astype(int)
+        prec, rec = _binary_pr(y_np, y_hat)
 
-        best_rates = []
-        for grp in group_order:
-            mask = sensitive.astype(str) == str(grp)
-            if int(mask.sum()) == 0:
-                continue
-            best_rates.append(round(float(np.mean(y_hat[mask] == 1)), 4))
-
-        acc = float(round(np.mean(y_hat == np.array(y, dtype=int)), 4))
-        dpd_after, dir_after = _compute_dpd_dir_from_rates(best_rates)
-        prec, rec = _binary_pr(np.array(y, dtype=int), y_hat)
-        tpr_gap, fpr_gap = _compute_tpr_fpr_gaps(np.array(y, dtype=int), y_hat, sensitive)
-        return {"method":"threshold_optimisation","method_type":"post-processing","accuracy":acc,"precision":prec,"recall":rec,"dpd":dpd_after,"dir":dir_after,
-                "tpr_gap":tpr_gap,"fpr_gap":fpr_gap,"adjusted_rates":best_rates,
-                "global_target":round(global_target,4)}
+        return {
+            "method":         "threshold_optimisation",
+            "method_type":    "post-processing",
+            "accuracy":       acc_after,
+            "precision":      prec,
+            "recall":         rec,
+            "dpd":            dpd_after,
+            "dir":            dir_after,
+            "tpr_gap":        tpr_gap_val,
+            "fpr_gap":        fpr_gap_val,
+            "adjusted_rates": adj_rates,
+            "group_thresholds": result["group_thresholds"],
+            "target_rate":    result["target_rate"],
+        }
     except (ValueError, KeyError, pd.errors.MergeError) as e:
-        return {"method":"threshold_optimisation","error":str(e)}
+        return {"method": "threshold_optimisation", "error": str(e)}
     except Exception:
         logger.exception("Unexpected error in threshold optimisation mitigation")
-        return {"method":"threshold_optimisation","error":"Internal error — see server logs"}
+        return {"method": "threshold_optimisation", "error": "Internal error — see server logs"}
 
 
 def _method_disparate_impact_remover(df, computed, repair_level=DEFAULT_REPAIR_LEVEL):
@@ -1986,6 +1988,26 @@ async def run_audit(request: AuditRequest) -> AuditResponse:
     if sensitive_col and target_col:
         stat_test = run_statistical_test(df, sensitive_col, target_col, c["positive_class"])
 
+    # ── 3-Layer bias analysis ──────────────────────────────────────────────
+    # Layer 1: Dataset bias (chi-square on labels — tests historical discrimination in data)
+    # Layer 2: Model bias  (chi-square on predictions — tests what the model learned)
+    # Layer 3: Outcome bias (observed allocation disparity)
+    bias_layers_result: dict = {}
+    try:
+        bias_layers_result["dataset"] = layer_dataset_bias(
+            df, sensitive_col, target_col
+        ) if sensitive_col and target_col else {}
+        bias_layers_result["model"] = layer_model_bias(
+            df, sensitive_col, target_col, pred_col or "", c.get("positive_class")
+        ) if sensitive_col and target_col and pred_col else {}
+        bias_layers_result["outcome"] = layer_outcome_bias(
+            groups=[g["group"] for g in c["group_stats"]],
+            selection_rates={g["group"]: g["pass_rate"] for g in c["group_stats"]},
+        ) if c.get("group_stats") else {}
+    except Exception as layer_err:
+        logger.warning(f"Bias layer analysis failed: {layer_err}")
+        bias_layers_result = {}
+
     root_causes      = generate_root_causes(stats)
     bias_origin_dict = detect_bias_origin(stats)
     mitigation       = await run_mitigation(df, c, dataset_description=request.description)
@@ -2017,7 +2039,7 @@ async def run_audit(request: AuditRequest) -> AuditResponse:
             {"bias_score": c["bias_score"], "metrics": c["metrics"], "mitigation": mitigation.model_dump()},
             final_compliance,
         )
-        response.compliance = final_compliance
+        response.compliance = {**final_compliance, "bias_layers": bias_layers_result}
         response.integrity_hash = integrity_hash
         storage = JSONStorageManager()
         saved = storage.save_audit(
