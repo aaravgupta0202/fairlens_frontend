@@ -1069,7 +1069,14 @@ def _method_reweighing(df, computed):
     """
     Reweighing using the correct Kamiran-Calders (2012) formula:
         w(A=a, Y=y) = P(A=a) * P(Y=y) / P(A=a, Y=y)
-    Delegates to fairness/reweighing.py for math correctness.
+
+    Reweighing is pre-processing — it rebalances instance weights so a model
+    trained on the reweighted dataset would see equal group representation.
+    The resulting "adjusted rates" are the WEIGHTED selection rates, not new labels.
+
+    Accuracy is estimated as the expected accuracy under the reweighted distribution:
+      acc_g = P_w(ŷ=1)*P(y=1) + P_w(ŷ=0)*P(y=0)  per group, averaged.
+    This reflects the real accuracy cost of imposing independence.
     """
     try:
         sc = computed["sensitive_col"]; tc = computed["target_col"]
@@ -1081,7 +1088,20 @@ def _method_reweighing(df, computed):
             return result
         adj_rates = result["adjusted_rates"]
         dpd_after = result["dpd"]; dir_after = result["dir"]
-        acc = _compute_expected_accuracy(gs, adj_rates)
+        # Expected accuracy under weighted distribution (independence assumption):
+        # acc_g = adj_rate_g * base_pass_rate_g + (1-adj_rate_g)*(1-base_pass_rate_g)
+        total_expected = 0.0; total_n = 0
+        for g_stat, adj_r in zip(gs, adj_rates):
+            n = int(g_stat.get("count", 0))
+            if n <= 0: continue
+            base_pos = float(g_stat.get("pass_rate", 0.0))
+            base_neg = 1.0 - base_pos
+            adj_r_f  = max(0.0, min(1.0, float(adj_r)))
+            # Expected correct = P(ŷ=1,y=1) + P(ŷ=0,y=0)
+            exp_acc = adj_r_f * base_pos + (1.0 - adj_r_f) * base_neg
+            total_expected += exp_acc * n
+            total_n += n
+        acc = round(total_expected / total_n, 4) if total_n > 0 else None
         result["accuracy"] = acc
         return result
     except (ValueError, KeyError, pd.errors.MergeError) as e:
@@ -1511,13 +1531,14 @@ async def run_mitigation(
         ))
 
     valid_results = [r for r in results if r.final_score >= 0]
-    selected_valid = [r for r in valid_results if r.method == selected_method]
-    if selected_valid:
-        best = selected_valid[0]
+    # Always pick by highest rank score. The scenario bonus (+0.03) is already
+    # baked into final_score for the policy-selected method, so it acts as a
+    # tie-breaker — it does NOT force selection when another method is clearly better.
+    if valid_results:
+        best = max(valid_results, key=lambda x: x.final_score)
     else:
-        best = (max(valid_results, key=lambda x: x.final_score)
-                if valid_results
-                else min(results, key=lambda x: x.bias_score))
+        # All methods invalid — pick the one with lowest bias score
+        best = min(results, key=lambda x: x.bias_score)
 
     bias_after  = best.bias_score
     acc_after   = best.accuracy

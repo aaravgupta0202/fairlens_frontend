@@ -18,6 +18,31 @@ export default function BadgeModal({ result, onClose }) {
   const badgeId      = useMemo(() => generateBadgeId(result), [result])
   const badgePageUrl = `${window.location.origin}/badge/${badgeId}`
 
+  // Save badge data to localStorage so BadgePage can display the certificate
+  useMemo(() => {
+    try {
+      const badges = JSON.parse(localStorage.getItem('fairlens_badges') || '{}')
+      if (!badges[badgeId]) {
+        badges[badgeId] = {
+          id: badgeId,
+          issuedAt: Date.now(),
+          score: result?.bias_score ?? 0,
+          level: result?.bias_level ?? 'Unknown',
+          risk_label: result?.risk_label ?? '',
+          sensitive_column: result?.sensitive_column,
+          target_column: result?.target_column,
+          total_rows: result?.total_rows,
+          metrics_flagged: (result?.metrics ?? []).filter(m => m.flagged).length,
+          metrics_total: (result?.metrics ?? []).length,
+          key_findings: (result?.key_findings ?? []).slice(0, 3),
+          cramers_v: result?.statistical_test?.cramers_v,
+          effect_size: result?.statistical_test?.effect_size,
+        }
+        localStorage.setItem('fairlens_badges', JSON.stringify(badges))
+      }
+    } catch {}
+  }, [badgeId, result])
+
   const svgBadge = useMemo(() => [
     `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="40" role="img" aria-label="FairLens Audit: ${score}/100 - ${level}">`,
     `<title>FairLens Audit: ${score}/100 - ${level}</title>`,
