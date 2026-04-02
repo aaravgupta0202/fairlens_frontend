@@ -230,84 +230,412 @@
 /* ── No result ── */
 .noResult { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; gap: 16px; }
 
-/* ════════════════════════════════════════════════════════
-   CRAMÉR'S V CARD
-   ════════════════════════════════════════════════════════ */
-.cramersCard { border-radius: var(--radius); border: 1.5px solid; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
-.cramersCardFlagged { background: rgba(248,113,113,.04); border-color: rgba(248,113,113,.4); }
-.cramersCardOk      { background: rgba(74,222,128,.04);  border-color: rgba(74,222,128,.3);  }
-.cramersTopRow { display: flex; gap: 14px; align-items: center; }
-.cramersIconWrap { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.cramersVerdict { display: flex; flex-direction: column; gap: 3px; }
-.cramersVerdictLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
-.cramersVerdictText { font-size: 15px; font-weight: 700; }
-.cramersBody { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-.cramersMetric { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.cramersMetricLabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
-.cramersMetricValue { font-size: 36px; font-weight: 900; line-height: 1; font-family: var(--font-display); }
-.cramersEffectBadge { font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: var(--radius-full); border: 1px solid; }
-.cramersBarWrap { display: flex; flex-direction: column; gap: 4px; }
-.cramersBarTrack { height: 8px; background: var(--surface2); border-radius: 4px; position: relative; overflow: visible; }
-.cramersBarFill { height: 100%; border-radius: 4px; transition: width .6s ease; }
-.cramersZoneSmall, .cramersZoneMedium, .cramersZoneLarge { position: absolute; top: -4px; width: 1.5px; height: 16px; background: var(--border-light); border-radius: 1px; }
-.cramersZoneSmall  { left: 16.67%; }
-.cramersZoneMedium { left: 33.33%; }
-.cramersZoneLarge  { left: 66.67%; }
-.cramersBarLabels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); padding: 0 2px; }
-.cramersStats { display: flex; gap: 20px; flex-wrap: wrap; }
-.cramersStat  { display: flex; flex-direction: column; gap: 2px; }
-.cramersStatLabel { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); font-weight: 600; }
-.cramersStatVal   { font-size: 16px; font-weight: 700; }
-.cramersInterpretation { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin: 0; border-top: 1px solid var(--border); padding-top: 12px; }
-
-/* plain-lang under metric cards */
-.plainLangMetric { font-size: 12px; color: var(--primary); line-height: 1.55; margin: 6px 0 0; padding: 6px 10px; background: rgba(232,114,12,.06); border: 1px solid rgba(232,114,12,.15); border-radius: 6px; }
-
-/* ════════════════════════════════════════════════════════
-   RESPONSIVE — 768px tablet
-   ════════════════════════════════════════════════════════ */
+/* ══ RESPONSIVE ══ */
 
 
-/* ════════════════════════════════════════════════════════
-   RESPONSIVE — 480px mobile
-   ════════════════════════════════════════════════════════ */
 
-
-/* ════════════════════════════════════════════════════════
-   RESPONSIVE — 360px very small
-   ════════════════════════════════════════════════════════ */
-
-
-/* Ask AI tab — full height, no extra padding */
 .tabContentAsk { padding: 0; display: flex; flex-direction: column; flex: 1; }
 .tabContentAsk .chatPanel { border-radius: 0; border-left: none; border-right: none; border-bottom: none; min-height: unset; flex: 1; }
 
-/* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE — AuditResultsPage
-   ═══════════════════════════════════════════════════════════════ */
-
-/* Prevent horizontal overflow globally */
-html, body { overflow-x: hidden; max-width: 100vw; }
-* { -webkit-overflow-scrolling: touch; }
-
-/* ── 768 px — tablet ── */
-
-
-/* ── 480 px — phone ── */
-
-
-/* ── 360 px — very small phones ── */
-
-
-/* ── Counterfactual always responsive ── */
-
-
-/* ── Ask AI tab — full height on all screens ── */
-.tabContentAsk { padding: 0; display: flex; flex-direction: column; flex: 1; }
-.tabContentAsk .chatPanel {
-  border-radius: 0; border-left: none; border-right: none; border-bottom: none;
-  min-height: unset; flex: 1;
+/* ── Projection notice ── */
+.projectionNotice {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.25);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius); padding: 12px 16px;
+  font-size: 13px; color: var(--text-muted); line-height: 1.5;
+  margin-bottom: 8px;
 }
+.projectionNotice strong { color: var(--amber); }
+
+/* ── Banner item labels ── */
+.simBannerItem { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.simBannerLabel { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.effectBadge { font-size: 12px; font-weight: 500; margin-left: 4px; }
+
+/* ── Cramér V badge ── */
+.statSigBadge { display: inline-block; margin-left: 10px; font-size: 11px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); padding: 2px 8px; border-radius: var(--radius-full); color: var(--text-muted); }
+
+/* ── Numeric Feature Gaps ── */
+.numericGapsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.numericGapItem { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.numericGapFlagged { border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.03); }
+.numericGapHeader { display: flex; justify-content: space-between; align-items: center; }
+.numericGapCol { font-size: 12px; font-weight: 600; color: var(--text); }
+.numericGapPct { font-size: 13px; font-weight: 700; }
+.numericGapBar { height: 5px; background: var(--surface); border-radius: 3px; overflow: hidden; }
+.numericGapFill { height: 100%; border-radius: 3px; transition: width .4s; }
+.numericGapGroups { display: flex; flex-direction: column; gap: 2px; }
+.numericGapGroup { font-size: 11.5px; color: var(--text-muted); }
+.numericGapGroup strong { color: var(--text); margin-right: 4px; }
+.numericGapRaw { font-size: 10px; color: var(--text-muted); opacity: .7; margin-top: 2px; }
+
+/* ── Plain-Language Translation ── */
+.plainLangCard {
+  background: var(--surface);
+  border: 1px solid rgba(232,114,12,.25);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plainLangHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.plainLangText {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.7;
+  margin: 0;
+}
+.plainLangText + .plainLangText {
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.plainLangMetric {
+  font-size: 12px;
+  color: var(--primary);
+  line-height: 1.55;
+  margin: 6px 0 0;
+  padding: 6px 10px;
+  background: rgba(232,114,12,.06);
+  border: 1px solid rgba(232,114,12,.15);
+  border-radius: 6px;
+  font-style: normal;
+}
+
+/* ── Counterfactual Editor (What-If Tab) ── */
+.cfContainer {
+  display: flex;
+  gap: 20px;
+  height: 500px;
+}
+.cfTableWrap {
+  flex: 2;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cfTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.cfTable th, .cfTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.cfTable th {
+  background: var(--surface2);
+  color: var(--primary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.cfTable tbody tr {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.cfTable tbody tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+.cfActiveRow {
+  background: rgba(232,114,12,0.15) !important;
+  color: var(--primary);
+}
+.cfEditor {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cfEditor h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 18px;
+}
+.cfEditor p {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.cfField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cfField label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cfField input, .cfField select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+.cfField input:disabled {
+  opacity: 0.7;
+}
+.cfResult {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.cfRateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.cfRateBox span {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cfRateBox strong {
+  font-size: 24px;
+  color: var(--text);
+}
+.cfArrow {
+  font-size: 24px;
+  color: var(--faint);
+  margin: 0 10px;
+}
+.cfDiff {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--surface2);
+  margin-top: 8px;
+}
+.cfDiffUp {
+  background: rgba(74,222,128,0.1);
+  color: var(--green);
+}
+.cfDiffDown {
+  background: rgba(248,113,113,0.1);
+  color: var(--red);
+}
+
+/* ── Missing tabDesc class (was referenced in JSX but undefined) ─────────── */
+.tabDesc {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 700px;
+}
+
+/* ── Enhanced Counterfactual (What-If) Tool ─────────────────────────────── */
+.cfEuBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(232, 114, 12, 0.07);
+  border: 1px solid rgba(232, 114, 12, 0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.cfEuIcon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.cfEuBannerText { display: flex; flex-direction: column; gap: 3px; }
+.cfEuBannerTitle { font-size: 13px; font-weight: 700; color: var(--primary); }
+.cfEuBannerDesc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+.cfLayout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+
+.cfTableCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.cfTableHeader {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cfTableMeta { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+.cfTableScroll { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+
+.cfEditorCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  position: sticky;
+  top: 80px;
+  margin-top: 4px;
+}
+.cfEditorHeader {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cfEditorTitle { font-size: 13px; font-weight: 700; color: var(--text); }
+.cfEditorBody { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.whatIfStack { display: flex; flex-direction: column; gap: 16px; margin-top: 10px; }
+
+.cfRowPreview {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  max-height: 100px;
+  overflow-y: auto;
+}
+.cfRowPreviewGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.cfRowPreviewItem { display: flex; gap: 4px; }
+.cfRowPreviewKey { color: var(--text-muted); font-weight: 500; }
+.cfRowPreviewVal { color: var(--text); word-break: break-all; }
+
+.cfSelectSection { display: flex; flex-direction: column; gap: 8px; }
+.cfSelectLabel { font-size: 12px; font-weight: 600; color: var(--text); }
+.cfSelectDesc { font-size: 11px; color: var(--text-muted); }
+.cfSelect {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cfSelect:focus { outline: none; border-color: var(--primary); }
+
+.cfComparisonGrid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.cfRateCardOrig, .cfRateCardNew {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+}
+.cfRateCardOrig { border-color: rgba(113,113,122,0.3); }
+.cfRateLabel { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.cfRateGroup {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 100px;
+  background: var(--surface2);
+  color: var(--text);
+}
+.cfRateNum { font-size: 26px; font-weight: 800; color: var(--text); }
+.cfRateBar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.cfRateFill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.cfArrowBig { font-size: 20px; color: var(--text-muted); text-align: center; }
+
+.cfDiffCard {
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  border: 1.5px solid transparent;
+  transition: all 0.3s ease;
+}
+.cfDiffNeutral { background: var(--surface2); color: var(--text-muted); border-color: var(--border); }
+.cfDiffPositive { background: rgba(74,222,128,0.1); color: var(--green); border-color: rgba(74,222,128,0.3); }
+.cfDiffNegative { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
+.cfDiffSubtext { font-size: 11px; font-weight: 400; margin-top: 4px; color: inherit; opacity: 0.8; }
+
+.cfLegalNote {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+.cfEmptyState {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.cfGroupBar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+.cfGroupBarItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.cfGroupBarLabel { width: 90px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+.cfGroupBarTrack {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cfGroupBarFill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.cfGroupBarPct { width: 46px; text-align: right; font-weight: 700; color: var(--text); }
 
 /* ══ CRAMÉR'S V BIG CARD ══════════════════════════════════════════════════ */
 .cramersCard { border-radius: var(--radius); border: 1.5px solid; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -425,3 +753,83 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 .tabContentAsk { padding: 0; display: flex; flex-direction: column; flex: 1; }
 .tabContentAsk .chatPanel { border-radius: 0; border-left: none; border-right: none; border-bottom: none; min-height: unset; flex: 1; }
+/* ══ RESPONSIVE ══ */
+@media (max-width: 768px) {
+  .header { padding: 0 12px; height: auto; min-height: 52px; flex-wrap: wrap; gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+  .headerLeft, .headerRight { gap: 6px; flex-wrap: wrap; }
+  .logoImg { height: 22px; }
+  .backBtn, .actionBtn { padding: 4px 10px; font-size: 12px; }
+  .scoreStrip { padding: 8px 14px; }
+  .stripPill { min-width: 72px; padding: 4px 8px; }
+  .tabBar { padding: 5px 8px; justify-content: flex-start; }
+  .tab { padding: 6px 10px; font-size: 12px; gap: 3px; }
+  .tabLabel { display: none; }
+  .tabContent { padding: 16px 14px; gap: 12px; }
+  .summaryHero { flex-direction: column; gap: 14px; padding: 18px; }
+  .gaugeWrap { width: 120px; align-self: center; }
+  .summaryTitle { font-size: 18px; }
+  .quickStats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .nextStepRow { flex-direction: column; gap: 8px; }
+  .nextStepBtn, .nextStepBtnSecondary { width: 100%; justify-content: center; padding: 10px; font-size: 13px; }
+  .metricsGrid { grid-template-columns: 1fr; }
+  .twoCol { grid-template-columns: 1fr; }
+  .transpGrid { grid-template-columns: repeat(2, 1fr); }
+  .mitigationGrid { grid-template-columns: 1fr; }
+  .simResultBanner { flex-direction: column; gap: 12px; padding: 14px; }
+  .simBannerNum { font-size: 32px; }
+  .chatPanel { min-height: 420px; }
+  .card { padding: 16px; }
+  .tableWrap { border-radius: var(--radius-sm); }
+  .table { font-size: 12px; }
+  .table th, .table td { padding: 7px 9px; }
+  .tabTitle { font-size: 17px; }
+  .cramersMetricValue { font-size: 28px; }
+  .cfLayout { flex-direction: column; }
+  .cfTableCard { max-height: 280px; }
+}
+
+@media (max-width: 480px) {
+  .header { padding: 6px 10px; }
+  .backBtn, .actionBtn { padding: 3px 7px; font-size: 11px; }
+  .logoImg { height: 20px; }
+  .tabBar { padding: 4px 6px; gap: 1px; }
+  .tab { padding: 5px 8px; border-radius: 6px; }
+  .tabBadge { font-size: 9px; padding: 1px 4px; }
+  .tabContent { padding: 10px; gap: 10px; }
+  .summaryHero { padding: 14px; }
+  .gaugeWrap { width: 100px; }
+  .summaryTitle { font-size: 16px; }
+  .riskBadge { font-size: 10px; padding: 3px 10px; }
+  .quickStats { gap: 8px; }
+  .statCard { padding: 10px 12px; }
+  .statValue { font-size: 15px; }
+  .statLabel, .statMeta { font-size: 10px; }
+  .card { padding: 12px; }
+  .metricValue { font-size: 20px; }
+  .chatPanel { min-height: 360px; }
+  .chatSuggestions { display: none; }
+  .chatInput { font-size: 13px; padding: 8px 12px; }
+  .mitigationStats { grid-template-columns: 1fr; gap: 6px; }
+  .formulaBox { font-size: 11px; overflow-x: auto; }
+  .columnPills { gap: 5px; }
+  .colPill { font-size: 11px; padding: 4px 9px; }
+  .transpGrid { grid-template-columns: 1fr; }
+  .tabTitle { font-size: 15px; }
+  .main { overflow-x: hidden; }
+  .table { font-size: 11px; }
+  .table th, .table td { padding: 6px 7px; }
+  .cramersMetricValue { font-size: 24px; }
+  .cramersVerdictText { font-size: 13px; }
+  .cramersIconWrap { width: 36px; height: 36px; }
+}
+
+@media (max-width: 360px) {
+  .header { padding: 5px 8px; }
+  .tabContent { padding: 8px; }
+  .card { padding: 10px; }
+  .summaryHero { padding: 10px; }
+}
+
+.tabContentAsk { padding: 0; display: flex; flex-direction: column; flex: 1; }
+.tabContentAsk .chatPanel { border-radius: 0; border-left: none; border-right: none; border-bottom: none; min-height: unset; flex: 1; }
+.sectionTitle { font-size: 14px; font-weight: 700; margin: 0 0 10px; color: var(--text); }

@@ -34,6 +34,7 @@
 /* Icon MUST be white on orange active background */
 .active .fl-icon { color: #ffffff !important; }
 
+.icon { font-size: 0.85rem; }
 .label { display: none; }
 @media (min-width: 500px) { .label { display: inline; } }
 @media (max-width: 480px) { .btn { padding: 0.25rem 0.5rem; } }
