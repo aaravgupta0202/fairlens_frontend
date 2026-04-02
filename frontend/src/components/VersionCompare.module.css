@@ -179,12 +179,22 @@
 
 .textRed { color: var(--red); }
 .textGreen { color: var(--green); }
-
 @media (max-width: 768px) {
-  .layout { grid-template-columns: 1fr; }
-  .historyList { max-height: 200px; }
+  .compareContainer { flex-direction: column; height: auto; gap: 16px; }
+  .historySidebar   { flex: none; padding: 14px; }
+  .historyList      { max-height: 220px; }
+  .compareMain      { padding: 16px; gap: 14px; }
+  .diffHeader       { flex-direction: column; gap: 12px; align-items: flex-start; padding: 14px; }
+  .diffValue        { font-size: 22px; }
+  .timelineBox      { height: 120px; }
 }
 @media (max-width: 480px) {
-  .diffTable { font-size: 11px; }
-  .diffTable th, .diffTable td { padding: 6px 8px; }
+  .compareContainer { gap: 12px; }
+  .historySidebar   { padding: 12px; }
+  .compareMain      { padding: 12px; }
+  .diffValue        { font-size: 20px; }
+  .diffTable th, .diffTable td { padding: 7px 8px; font-size: 12px; }
+  .historyList      { gap: 6px; }
+  .historyBtn       { padding: 9px; }
+  .histDesc         { font-size: 12px; }
 }

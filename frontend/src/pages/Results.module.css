@@ -142,35 +142,40 @@
 }
 
 /* ── Responsive — tablet ── */
+
+
+/* ── Responsive — mobile ── */
+
+
+/* ── Extended mobile ── */
+
+
+
+/* ── Extended mobile ── */
 @media (max-width: 768px) {
   .header { padding: 0 16px; height: 56px; }
   .logoImg { height: 24px; }
   .actionBtn { padding: 5px 11px; font-size: 12px; }
   .backBtn   { padding: 5px 11px; font-size: 12px; }
   .main { padding: 16px 16px 48px; }
-  .topRow { grid-template-columns: 1fr; }
+  .topRow { grid-template-columns: 1fr; gap: 1rem; }
   .card { padding: 16px; }
 }
 
-/* ── Responsive — mobile ── */
 @media (max-width: 480px) {
   .header { padding: 0 12px; gap: 8px; }
   .actionBtn { padding: 4px 9px; font-size: 11.5px; }
   .backBtn   { padding: 4px 9px; font-size: 11.5px; }
   .logoImg   { height: 22px; }
   .main { padding: 12px 12px 36px; }
-}
-
-/* ── Extended mobile fixes ── */
-@media (max-width: 480px) {
-  .topRow { grid-template-columns: 1fr; gap: 1rem; }
-  .gaugeWrapper { padding: 0.25rem 0; }
   .card { padding: 14px; gap: 1rem; }
   .banner { font-size: 0.82rem; padding: 0.7rem 1rem; }
   .promptText { font-size: 0.85rem; padding: 0.7rem 0.8rem; }
+  .cardTitle { font-size: 0.65rem; }
+  .gaugeHint { font-size: 0.78rem; }
 }
 
 @media (max-width: 360px) {
-  .main { padding: 10px 10px 32px; }
+  .main { padding: 10px 10px 28px; }
   .card { padding: 12px; }
 }

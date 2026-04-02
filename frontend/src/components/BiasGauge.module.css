@@ -33,3 +33,7 @@
   border: 1px solid transparent;
   text-transform: uppercase;
 }
+
+@media (max-width: 480px) {
+  .svg { width: 110px; height: 110px; }
+}

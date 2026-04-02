@@ -8,7 +8,7 @@ import HistoryPanel from '../components/HistoryPanel'
 import TrendChart from '../components/TrendChart'
 import PageHeader from '../components/PageHeader'
 import { buildShareUrl, decodeShareData } from '../api/share'
-import { exportToPdf } from '../api/exportPdf'
+import { exportToPdf, exportToPdfBlob } from '../api/exportPdf'
 import Icon from '../components/Icon'
 import styles from './Results.module.css'
 
@@ -19,16 +19,33 @@ export default function Results() {
   const [shareState, setShareState] = useState('idle')
   const [showHistory, setShowHistory] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
 
   const sharedParam = searchParams.get('shared')
+  const [shareError, setShareError] = useState('')
   let stateData = location.state
   if (!stateData && sharedParam) {
     const decoded = decodeShareData(sharedParam)
-    if (decoded) stateData = decoded
+    if (decoded?.data) stateData = decoded.data
+    else if (decoded?.error) setShareError(decoded.error)
   }
 
   const { result, prompt, aiResponse } = stateData || {}
-  useEffect(() => { if (!result) navigate('/', { replace: true }) }, [result, navigate])
+  useEffect(() => {
+    if (!result && !shareError) navigate('/', { replace: true })
+  }, [result, navigate, shareError])
+  if (shareError) {
+    return (
+      <div className={styles.page}>
+        <main className={styles.main}>
+          <div className={styles.card}>
+            <p className={styles.cardTitle}>Share link error</p>
+            <p className={styles.promptText}>{shareError}</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
   if (!result) return null
 
   async function handleShare() {
@@ -46,8 +63,28 @@ export default function Results() {
     try { await exportToPdf(prompt, aiResponse, result) }
     finally { setExporting(false) }
   }
+  async function handlePreviewPdf() {
+    const previewTab = window.open('', '_blank')
+    setPreviewing(true)
+    try {
+      if (!previewTab) {
+        throw new Error('Popup blocked')
+      }
+      previewTab.document.write('<!doctype html><title>Generating PDF preview…</title><p style="font-family:sans-serif;padding:16px">Generating PDF preview…</p>')
+      const blob = await exportToPdfBlob(prompt, aiResponse, result)
+      const nextUrl = URL.createObjectURL(blob)
+      previewTab.location.href = nextUrl
+      setTimeout(() => URL.revokeObjectURL(nextUrl), 60_000)
+    } catch (error) {
+      if (previewTab && !previewTab.closed) previewTab.close()
+      throw error
+    } finally {
+      setPreviewing(false)
+    }
+  }
 
   const shareLabel = { idle: 'Share', copied: 'Copied!', error: 'Failed' }[shareState]
+  const fairnessGrade = result.bias_score < 20 ? 'A' : result.bias_score < 35 ? 'B' : result.bias_score < 50 ? 'C' : result.bias_score < 70 ? 'D' : 'F'
 
   return (
     <div className={styles.page}>
@@ -56,6 +93,7 @@ export default function Results() {
         actions={[
           { label: 'History', onClick: () => setShowHistory(true) },
           { label: shareLabel, onClick: handleShare, success: shareState === 'copied' },
+          { label: previewing ? 'Preparing…' : 'Preview PDF', onClick: handlePreviewPdf, disabled: previewing },
           { label: exporting ? 'Exporting…' : 'PDF', onClick: handleExportPdf, disabled: exporting },
         ]}
       />
@@ -65,6 +103,7 @@ export default function Results() {
           {result.bias_level === 'Low' && '✓ Low bias detected. This response appears mostly fair.'}
           {result.bias_level === 'Moderate' && 'Moderate bias detected. Review the analysis below.'}
           {result.bias_level === 'High' && 'High bias detected. See the corrected version below.'}
+          {result.bias_level === 'Critical' && '⚠ Critical bias detected. Significant fairness intervention required before deployment.'}
         </div>
 
         <div className={styles.topRow}>
@@ -74,9 +113,11 @@ export default function Results() {
               <BiasGauge score={result.bias_score} level={result.bias_level} confidence={result.confidence} />
             </div>
             <p className={styles.gaugeHint}>
+              Fairness Grade: <strong>{fairnessGrade}</strong><br />
               {result.bias_level === 'Low' && 'Minimal bias detected.'}
               {result.bias_level === 'Moderate' && 'Notable bias that could affect some groups.'}
               {result.bias_level === 'High' && 'Significant bias. Review the unbiased rewrite.'}
+              {result.bias_level === 'Critical' && 'Critical bias. Deployment blocked pending remediation.'}
             </p>
           </div>
           <div className={`${styles.card} ${styles.chartCard}`}>
@@ -106,6 +147,7 @@ export default function Results() {
           <p className={styles.cardTitle}>Original Prompt</p>
           <p className={styles.promptText}>{prompt}</p>
         </div>
+
       </main>
 
       <footer className={styles.footer}>

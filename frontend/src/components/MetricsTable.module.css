@@ -81,3 +81,11 @@
   font-size: 0.9rem;
   margin-left: 4px;
 }
+
+@media (max-width: 480px) {
+  .table { font-size: 0.76rem; }
+  .table th { padding: 0.5rem; font-size: 0.66rem; }
+  .table td { padding: 0.6rem 0.5rem; }
+  .value { font-size: 0.82rem; }
+  .badge { font-size: 0.66rem; padding: 0.15rem 0.45rem; }
+}

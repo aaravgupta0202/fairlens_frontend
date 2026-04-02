@@ -69,6 +69,22 @@ export default function Home() {
     setDescription('This is a dataset of student marks in 4 subjects (Maths, English, Science, History) for grades 1 to 13, with 10 students per grade. Maths and English are graded by Teacher A, Science by Teacher B, and History by Teacher C. The passing threshold is 80 marks. The dataset includes student name, gender (Male/Female), grade level, subject, marks obtained, and pass/fail status.')
   }
 
+  async function loadExampleDataset() {
+    try {
+      const resp = await fetch('/example_student_marks.csv')
+      if (!resp.ok) throw new Error('Could not fetch example CSV')
+      const blob = await resp.blob()
+      const file = new File([blob], 'example_student_marks.csv', { type: 'text/csv' })
+      await handleFileSelected(file)
+      setDescription('This is a dataset of student marks in 4 subjects (Maths, English, Science, History) for grades 1 to 5, with 8 students per grade. Maths and English graded by Teacher A, Science by Teacher B, History by Teacher C. Passing threshold is 80 marks. Columns: Name, Gender (Male/Female), Grade (1-5), Subject, Marks (0-100), Pass (Pass/Fail).')
+      setTargetCol('Pass')
+      setSensitiveCol('Gender')
+      setAuditError('')
+    } catch (e) {
+      setAuditError('Could not load example dataset: ' + e.message)
+    }
+  }
+
   async function handleAudit() {
     if (!csvFile) { setAuditError('Please upload a CSV file.'); return }
     if (!description.trim()) { setAuditError('Please describe your dataset — this helps AI understand context.'); return }
@@ -81,7 +97,13 @@ export default function Home() {
         sensitiveColumn: sensitiveCol || null,
         sensitiveColumn2: sensitiveCol2 || null,
       })
-      saveToAuditHistory({ id: generateId(), timestamp: Date.now(), description: description.trim(), result })
+      saveToAuditHistory({
+        id: generateId(),
+        timestamp: Date.now(),
+        description: description.trim(),
+        audit_id: result?.audit_id || null,
+        result,
+      })
       navigate('/audit-results', { state: { result, description: description.trim() } })
     } catch (err) {
       setAuditError(`Audit failed: ${err?.response?.data?.detail || err.message}`)
@@ -89,7 +111,15 @@ export default function Home() {
   }
 
   function handleAuditHistoryOpen(entry) {
-    navigate('/audit-results', { state: { result: entry.result, description: entry.description || '' } })
+    if (entry.result) {
+      navigate('/audit-results', { state: { result: entry.result, description: entry.description || '' } })
+      return
+    }
+    if (entry.audit_id) {
+      navigate(`/audit-results?id=${encodeURIComponent(entry.audit_id)}`)
+      return
+    }
+    navigate('/audit-results')
   }
 
   const canRunAudit = csvFile && description.trim().length > 10
@@ -142,6 +172,9 @@ export default function Home() {
                 <div className={styles.stepContent}>
                   <p className={styles.stepLabel}>Upload CSV Dataset</p>
                   <DatasetUpload onFileSelected={handleFileSelected} file={csvFile} />
+                  <button className={styles.exampleDatasetBtn} onClick={loadExampleDataset}>
+                    ✨ Try Example Dataset
+                  </button>
                   {columns.length > 0 && (
                     <p className={styles.columnsHint}>
                       Detected columns: {columns.join(', ')}
@@ -156,7 +189,7 @@ export default function Home() {
                 <div className={styles.stepContent}>
                   <div className={styles.descLabelRow}>
                     <p className={styles.stepLabel}>Describe your dataset</p>
-                    <button className={styles.exampleBtn} onClick={loadExampleDescription} disabled={!csvFile}>
+                    <button className={styles.exampleBtn} onClick={loadExampleDescription}>
                       Load example
                     </button>
                   </div>

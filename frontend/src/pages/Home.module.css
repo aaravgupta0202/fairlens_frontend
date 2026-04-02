@@ -174,7 +174,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
 }
-@media (max-width: 640px) { .inputGrid { grid-template-columns: 1fr; } }
+
 
 .inputGroup {
   display: flex;
@@ -344,7 +344,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
-@media (max-width: 640px) { .steps { grid-template-columns: 1fr 1fr; } }
+
 
 .stepCard { display: flex; flex-direction: column; gap: 0.3rem; }
 .stepCardIcon { font-size: 1.7rem; margin-bottom: 0.25rem; }
@@ -436,90 +436,77 @@
   line-height: 1.5;
 }
 
-/* ════════════════════════════════════════════════════════════════
-   MOBILE RESPONSIVE — Home page
-   ════════════════════════════════════════════════════════════════ */
+/* ── Example Dataset Button ── */
+.exampleDatasetBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--grad-subtle); border: 1.5px solid var(--primary);
+  color: var(--primary); padding: 0.45rem 1.1rem;
+  border-radius: var(--radius-full); font-size: 0.83rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; margin-top: 8px;
+}
+.exampleDatasetBtn:hover { background: var(--grad); color: #fff; box-shadow: var(--shadow-glow); }
 
-/* ── Tablet 768px ── */
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE — 768px tablet
+   ════════════════════════════════════════════════════════ */
+
+
+/* ════════════════════════════════════════════════════════
+   RESPONSIVE — 480px mobile
+   ════════════════════════════════════════════════════════ */
+
+
+/* ── 360 px ── */
+/* ══ RESPONSIVE ══ */
 @media (max-width: 768px) {
   .page { padding: 0 0.875rem 3rem; }
-
-  .header {
-    padding: 1rem 0 0.5rem;
-    gap: 0.6rem;
-    flex-wrap: nowrap;
-  }
+  .header { padding: 1rem 0 0.5rem; gap: 0.6rem; flex-wrap: nowrap; }
   .logoImg { height: 32px; }
-
-  .tagline { font-size: 0.88rem; margin-bottom: 1.25rem; padding: 0 0.25rem; }
-
+  .tagline { font-size: 0.88rem; margin-bottom: 1.25rem; }
   .main { gap: 1.1rem; }
-
   .modeToggle { padding: 4px; gap: 0.35rem; }
   .modeBtn { padding: 0.6rem 0.8rem; font-size: 0.85rem; gap: 0.4rem; }
-
   .card { padding: 1.4rem; }
   .cardHeader { flex-direction: column; align-items: flex-start; gap: 0.75rem; margin-bottom: 1.1rem; }
   .cardHeader h2 { font-size: 1rem; }
-
   .auditSteps { gap: 1.4rem; }
   .stepRow { gap: 1rem; }
   .stepNum { width: 28px; height: 28px; font-size: 0.82rem; }
-
   .colSelectors { grid-template-columns: 1fr; }
   .inputGrid { grid-template-columns: 1fr; gap: 1rem; }
-
   .analyseBtn { padding: 0.9rem; font-size: 0.95rem; margin-top: 1.25rem; }
-
   .howItWorks { padding: 1.4rem; }
   .steps { grid-template-columns: 1fr 1fr; gap: 0.85rem; }
-
   .historyBtn { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
 }
 
-/* ── Mobile 480px ── */
 @media (max-width: 480px) {
   .page { padding: 0 0.75rem 2.5rem; }
-
-  .header {
-    padding: 0.75rem 0 0.4rem;
-    gap: 0.5rem;
-  }
+  .header { padding: 0.75rem 0 0.4rem; gap: 0.5rem; }
   .logoImg { height: 28px; }
-  .historyBtn { padding: 0.35rem 0.65rem; font-size: 0.75rem; gap: 0.3rem; }
+  .historyBtn { padding: 0.35rem 0.65rem; font-size: 0.75rem; }
   .historyBadge { display: none; }
-
   .tagline { font-size: 0.82rem; margin-bottom: 1rem; }
-
   .main { gap: 0.9rem; }
-
-  .modeBtn { font-size: 0.78rem; padding: 0.5rem 0.6rem; gap: 0.3rem; }
-  /* Hide text label on very small screens, keep icons */
-  .modeBtn span:not([class]) { display: none; }
-
+  .modeBtn { font-size: 0.78rem; padding: 0.5rem 0.6rem; }
   .card { padding: 1rem 0.9rem; }
   .cardHeader { gap: 0.5rem; margin-bottom: 0.9rem; }
   .cardHeader h2 { font-size: 0.95rem; }
   .exampleBtn { font-size: 0.75rem; padding: 0.3rem 0.75rem; }
-
+  .exampleDatasetBtn { font-size: 0.78rem; padding: 0.4rem 0.85rem; }
   .stepNum { width: 24px; height: 24px; font-size: 0.76rem; flex-shrink: 0; }
   .stepRow { gap: 0.75rem; }
   .stepLabel { font-size: 0.85rem; }
   .stepHint { font-size: 0.78rem; }
-
   .textarea { font-size: 0.88rem; min-height: 140px; padding: 0.8rem; }
   .descTextarea { font-size: 13px; }
-
   .analyseBtn { font-size: 0.88rem; padding: 0.85rem; }
-
   .howItWorks { padding: 1rem; }
   .howItWorks h3 { font-size: 0.72rem; margin-bottom: 1rem; }
   .steps { gap: 0.65rem; }
   .stepCard strong { font-size: 0.82rem; }
   .stepCard p { font-size: 0.75rem; }
-
   .footer { font-size: 0.7rem; margin-top: 2rem; }
-
   .colSelectors { grid-template-columns: 1fr; gap: 10px; }
   .colSelect { font-size: 12px; padding: 7px 10px; }
 }

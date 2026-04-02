@@ -1,10 +1,14 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional, Dict, Any
 
 
 class AnalyseRequest(BaseModel):
     prompt: str
     ai_response: str
+    dataset: Optional[List[Dict[str, Any]]] = None
+    target_column: Optional[str] = None
+    prediction_column: Optional[str] = None
+    protected_attribute: Optional[str] = None
 
 
 class BiasCategory(BaseModel):

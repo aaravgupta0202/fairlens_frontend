@@ -1,7 +1,6 @@
 /**
  * share.js
  * Encodes/decodes result data as a URL parameter for sharing.
- * Supports both text analysis (/results) and audit results (/audit-results).
  */
 
 export function encodeShareData(data) {
@@ -13,15 +12,28 @@ export function encodeShareData(data) {
 
 export function decodeShareData(encoded) {
   try {
-    return JSON.parse(decodeURIComponent(atob(encoded)))
-  } catch { return null }
+    return { data: JSON.parse(decodeURIComponent(atob(encoded))), error: null }
+  } catch {
+    return { data: null, error: 'Invalid or corrupted shared link.' }
+  }
 }
 
-export function buildShareUrl(data) {
-  const encoded = encodeShareData(data)
+export function buildShareUrl(dataOrAuditId, options = {}) {
+  // Server-side audit ID — short link
+  if (typeof dataOrAuditId === 'string' && dataOrAuditId.trim()) {
+    return `${window.location.origin}/audit-results?id=${encodeURIComponent(dataOrAuditId.trim())}`
+  }
+  if (options.forceAuditId) return null
+
+  const encoded = encodeShareData(dataOrAuditId)
   if (!encoded) return null
 
-  // Route audit shares to /audit-results, text shares to /results
-  const route = data.type === 'audit' ? '/audit-results' : '/results'
+  // Detect audit vs text: audit results always have bias_level + metrics (not just bias_score)
+  // The type field may not be set, so check result shape
+  const isAudit = dataOrAuditId?.result?.metrics !== undefined
+    || dataOrAuditId?.metrics !== undefined
+    || dataOrAuditId?.type === 'audit'
+
+  const route = isAudit ? '/audit-results' : '/results'
   return `${window.location.origin}${route}?shared=${encoded}`
 }

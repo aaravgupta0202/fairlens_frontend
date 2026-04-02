@@ -139,7 +139,11 @@
 }
 .item:hover .deleteBtn { opacity: 1; }
 .deleteBtn:hover { color: var(--red); }
-
 @media (max-width: 480px) {
-  .panel { width: 96vw; max-height: 85vh; right: 2vw; top: 8px; }
+  .panel      { width: 100vw; border-left: none; }
+  .header     { padding: 1rem; }
+  .list       { padding: 0.5rem; }
+  .item       { padding: 0.75rem; }
+  .itemPrompt { font-size: 0.82rem; }
+  .scoreBadge { min-width: 40px; height: 40px; font-size: 0.78rem; }
 }

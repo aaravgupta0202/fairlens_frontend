@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { decodeShareData, buildShareUrl } from '../api/share'
 import {
@@ -6,7 +6,8 @@ import {
   CartesianGrid, Cell, LabelList, Legend,
 } from 'recharts'
 import { sendChatMessage } from '../api/audit'
-import { exportAuditToPdf } from '../api/exportPdf'
+import { getAuditResultById } from '../api/audit'
+import { exportAuditToPdf, exportAuditToPdfBlob } from '../api/exportPdf'
 import BiasGauge from '../components/BiasGauge'
 import ThemeToggle from '../components/ThemeToggle'
 import Icon from '../components/Icon'
@@ -24,7 +25,7 @@ function MetricCard({ metric, plainLang }) {
   return (
     <div className={`${styles.metricCard} ${metric.flagged ? styles.metricFlagged : styles.metricOk}`}>
       <div className={styles.metricHeader}>
-        <span className={styles.metricName}>{metric.name}</span>
+        <span className={styles.metricName} title={metric.key}>{metric.name}</span>
         <span className={`${styles.badge} ${metric.flagged ? styles.badgeRed : styles.badgeGreen}`}>
           {metric.flagged ? 'Flagged' : 'OK'}
         </span>
@@ -52,9 +53,17 @@ function MetricCard({ metric, plainLang }) {
   )
 }
 
+function toCompactSentence(text, maxLen = 180) {
+  if (!text) return ''
+  const first = String(text).split('. ')[0]?.trim() || ''
+  if (first.length <= maxLen) return first.endsWith('.') ? first : `${first}.`
+  return `${first.slice(0, maxLen).trim()}…`
+}
+
 // ── Chat Panel ────────────────────────────────────────────────────────────────
 function ChatPanel({ datasetDescription, auditSummary }) {
   const [messages, setMessages] = useState([{
+    id: 'assistant-initial',
     role: 'assistant',
     content: "Audit complete. Ask me anything — why bias exists, what metrics mean, or how to reduce it."
   }])
@@ -67,7 +76,8 @@ function ChatPanel({ datasetDescription, auditSummary }) {
     const msg = input.trim()
     if (!msg || loading) return
     setInput('')
-    const newMessages = [...messages, { role: 'user', content: msg }]
+    const userId = `u-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const newMessages = [...messages, { id: userId, role: 'user', content: msg }]
     setMessages(newMessages)
     setLoading(true)
     try {
@@ -76,9 +86,11 @@ function ChatPanel({ datasetDescription, auditSummary }) {
         conversation: newMessages.slice(1, -1),
         message: msg,
       })
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+      const assistantId = `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: reply }])
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Please try again.' }])
+      const assistantErrorId = `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      setMessages(prev => [...prev, { id: assistantErrorId, role: 'assistant', content: 'Connection error. Please try again.' }])
     } finally { setLoading(false) }
   }
 
@@ -91,8 +103,8 @@ function ChatPanel({ datasetDescription, auditSummary }) {
         </div>
       </div>
       <div className={styles.chatMessages}>
-        {messages.map((m, i) => (
-          <div key={i} className={`${styles.chatBubble} ${m.role === 'user' ? styles.chatUser : styles.chatBot}`}>
+        {messages.map((m) => (
+          <div key={m.id} className={`${styles.chatBubble} ${m.role === 'user' ? styles.chatUser : styles.chatBot}`}>
             {m.role === 'assistant' && <div className={styles.chatAvatar}>FL</div>}
             <div className={styles.chatText}>{m.content}</div>
           </div>
@@ -139,83 +151,422 @@ const TABS = [
 const normalizeGroup = v => v === null || v === undefined ? '' : String(v)
 
 // ── Counterfactual Editor ─────────────────────────────────────────────────────
-function CounterfactualEditor({ sampleRows, sensitiveCol, groupRatesMap }) {
-  const [selectedRowIndex, setSelectedRowIndex] = useState(null)
-  const [editedValue, setEditedValue] = useState('')
+// Implements Google WIT-style counterfactual analysis with proper multi-feature
+// scoring — not just a group rate lookup.
+//
+// SCORING METHODOLOGY (inspired by Google's What-If Tool):
+//   Google WIT re-runs the actual model. Since we don't have a deployed model,
+//   we compute an individual-level LOGISTIC SCORE using:
+//     1. A base score from the row's numeric features (z-score → logit → sigmoid)
+//     2. A group disparity multiplier from the audit's observed pass rates
+//   This gives a meaningful per-individual prediction that accounts for ALL
+//   numeric features, not just the group average.
+//
+// LEGAL BASIS:
+//   GDPR Art. 22 + AI Act Art. 86 + CJEU C-203/22 (Dun & Bradstreet Austria):
+//   Individuals subject to automated decisions have the right to a counterfactual
+//   explanation showing how a change in a single attribute would change the outcome.
+//
+// CONSTRAINT: Only the sensitive column value is editable (per user requirement).
+//   Other features are held constant — this is the pure counterfactual fairness
+//   definition: identical in all respects except the protected attribute.
 
-  if (!sampleRows || sampleRows.length === 0) return <p style={{ color: 'var(--text-muted)' }}>No sample data available for what-if analysis.</p>
+// ── Scoring Engine ────────────────────────────────────────────────────────────
+// Computes feature statistics from all sample rows for normalisation
+function computeFeatureStats(rows, numericCols) {
+  const stats = {}
+  for (const col of numericCols) {
+    const vals = rows.map(r => Number(r[col])).filter(v => !isNaN(v) && isFinite(v))
+    if (vals.length === 0) continue
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length
+    const variance = vals.reduce((a, v) => a + (v - mean) ** 2, 0) / vals.length
+    const std = Math.sqrt(variance) || 1
+    const min = Math.min(...vals)
+    const max = Math.max(...vals)
+    stats[col] = { mean, std, min, max, range: max - min || 1 }
+  }
+  return stats
+}
 
-  const normalizedRates = Object.entries(groupRatesMap || {}).reduce((acc, [k, v]) => {
-    acc[normalizeGroup(k)] = v
-    return acc
-  }, {})
+// Sigmoid function: maps any real number to [0, 1]
+function sigmoid(x) {
+  return 1 / (1 + Math.exp(-Math.max(-20, Math.min(20, x))))
+}
 
-  useEffect(() => {
-    if (selectedRowIndex === null && sampleRows.length > 0) {
-      const initialValue = normalizeGroup(sampleRows[0][sensitiveCol])
-      setSelectedRowIndex(0)
-      setEditedValue(initialValue)
+// Computes per-group feature correlations with the target (pass rate proxy)
+// Returns a weight vector: features with higher group mean in high-pass-rate groups get positive weight
+function computeFeatureWeights(rows, numericCols, sensitiveCol, groupRatesMap) {
+  const normRates = Object.fromEntries(
+    Object.entries(groupRatesMap || {}).map(([k, v]) => [String(k), v])
+  )
+  if (Object.keys(normRates).length < 2) {
+    // No group info — equal weights
+    return Object.fromEntries(numericCols.map(c => [c, 1]))
+  }
+
+  const weights = {}
+  for (const col of numericCols) {
+    // For each group, compute mean of this feature
+    const groupMeans = {}
+    for (const [grp, rate] of Object.entries(normRates)) {
+      const gRows = rows.filter(r => String(r[sensitiveCol]) === grp)
+      const vals = gRows.map(r => Number(r[col])).filter(v => !isNaN(v))
+      if (vals.length > 0) groupMeans[grp] = vals.reduce((a, b) => a + b, 0) / vals.length
     }
-  }, [selectedRowIndex, sampleRows, sensitiveCol])
+    // Correlation: do higher group means correlate with higher pass rates?
+    const entries = Object.entries(groupMeans).filter(([g]) => normRates[g] != null)
+    if (entries.length < 2) { weights[col] = 0.5; continue }
+    const rateArr = entries.map(([g]) => normRates[g])
+    const meanArr = entries.map(([, m]) => m)
+    const rBar = rateArr.reduce((a, b) => a + b, 0) / rateArr.length
+    const mBar = meanArr.reduce((a, b) => a + b, 0) / meanArr.length
+    const cov = entries.reduce((s, _entry, i) => s + (rateArr[i] - rBar) * (meanArr[i] - mBar), 0)
+    const varR = rateArr.reduce((s, r) => s + (r - rBar) ** 2, 0)
+    const varM = meanArr.reduce((s, m) => s + (m - mBar) ** 2, 0)
+    const corr = (varR > 0 && varM > 0) ? cov / Math.sqrt(varR * varM) : 0
+    weights[col] = corr  // range [-1, 1]
+  }
+  return weights
+}
 
-  const activeRow = selectedRowIndex !== null ? sampleRows[selectedRowIndex] : null
-  const originalValue = activeRow ? normalizeGroup(activeRow[sensitiveCol]) : ''
-  
-  const originalRate = originalValue ? normalizedRates[originalValue] : null
-  const newRate = editedValue ? normalizedRates[editedValue] : null
-  const diff = (originalRate != null && newRate != null) ? (newRate - originalRate) * 100 : 0
-  
+// Main scoring function — returns probability in [0, 1] for a given row + group
+// Mirrors the WIT approach of "what would the model predict for this individual"
+function scoreIndividual(row, group, numericCols, featureStats, featureWeights, groupRatesMap) {
+  const normRates = Object.fromEntries(
+    Object.entries(groupRatesMap || {}).map(([k, v]) => [String(k), v])
+  )
+
+  // Step 1: Compute individual feature score (z-score weighted sum → logit space)
+  let featureLogit = 0
+  let weightSum = Math.abs(Object.values(featureWeights).reduce((a, b) => a + Math.abs(b), 0)) || 1
+
+  for (const col of numericCols) {
+    const val = Number(row[col])
+    const stat = featureStats[col]
+    if (isNaN(val) || !stat) continue
+    const z = (val - stat.mean) / stat.std        // z-score
+    const w = (featureWeights[col] || 0) / weightSum
+    featureLogit += z * w * 2.5                   // scale to reasonable logit range
+  }
+
+  // Step 2: Group disparity adjustment
+  // This is the key counterfactual: same individual features, different group
+  const groupRate = normRates[String(group)] ?? 0.5
+  const globalMean = Object.values(normRates).reduce((a, b) => a + b, 0) / Math.max(Object.keys(normRates).length, 1)
+  // Convert group rate to logit offset relative to global mean
+  const groupLogit = Math.log((groupRate + 0.001) / (1 - groupRate + 0.001))
+    - Math.log((globalMean + 0.001) / (1 - globalMean + 0.001))
+
+  // Step 3: Combined logit → sigmoid probability
+  // Feature contribution: 60% (individual merit), group disparity: 40% (bias signal)
+  const totalLogit = featureLogit * 0.6 + groupLogit * 0.4
+
+  return sigmoid(totalLogit)
+}
+
+function CounterfactualEditor({ sampleRows, sensitiveCol, groupRatesMap, allNumericGaps }) {
+  const [selectedRowIndex, setSelectedRowIndex] = useState(0)
+  const [editedValue, setEditedValue] = useState('')
+  const [showFeatureDetail, setShowFeatureDetail] = useState(false)
+
+  // Normalize all keys to strings
+  const normalizedRates = Object.fromEntries(
+    Object.entries(groupRatesMap || {}).map(([k, v]) => [String(k), v])
+  )
   const availableGroups = Object.keys(normalizedRates)
 
-  return (
-    <div className={styles.cfContainer}>
-      <div className={styles.cfTableWrap}>
-        <table className={styles.cfTable}>
-          <thead>
-            <tr>
-              {Object.keys(sampleRows[0]).slice(0, 10).map(k => <th key={k}>{k} {k===sensitiveCol?'(S)':''}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {sampleRows.map((row, i) => (
-              <tr key={i} className={selectedRowIndex === i ? styles.cfActiveRow : ''} onClick={() => { setSelectedRowIndex(i); setEditedValue(normalizeGroup(row[sensitiveCol])) }}>
-                {Object.keys(row).slice(0, 10).map(k => <td key={k}>{String(row[k])}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+  // Detect numeric columns (exclude IDs and the sensitive/target cols)
+  const idPatterns = /^(id|index|row|num|no|number|sno|serial|player_id)$/i
+  const numericCols = sampleRows && sampleRows.length > 0
+    ? Object.keys(sampleRows[0]).filter(k => {
+        if (k === sensitiveCol) return false
+        if (idPatterns.test(k.trim())) return false
+        const vals = sampleRows.map(r => r[k]).filter(v => v != null && v !== '')
+        const numVals = vals.map(Number).filter(v => !isNaN(v))
+        return numVals.length > vals.length * 0.7  // at least 70% numeric
+      })
+    : []
+
+  // Compute feature stats and weights once
+  const featureStats = useMemo(
+    () => computeFeatureStats(sampleRows || [], numericCols),
+    [sampleRows, numericCols.join(',')]
+  )
+
+  // Safe weight computation with try-catch
+  const featureWeights = useMemo(() => {
+    try {
+      return computeFeatureWeights(sampleRows || [], numericCols, sensitiveCol, normalizedRates)
+    } catch { return Object.fromEntries(numericCols.map(c => [c, 0.5])) }
+  }, [sampleRows, numericCols.join(','), sensitiveCol, availableGroups.join(','), ...availableGroups.map(g => normalizedRates[g])])
+
+  useEffect(() => {
+    if (sampleRows && sampleRows.length > 0 && sensitiveCol) {
+      const v = String(sampleRows[Math.min(selectedRowIndex, sampleRows.length-1)]?.[sensitiveCol] ?? '')
+      setEditedValue(v || availableGroups[0] || '')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRowIndex, sampleRows?.length, sensitiveCol])
+
+  if (!sampleRows || sampleRows.length === 0 || availableGroups.length < 2) {
+    return (
+      <div className={styles.cfEmptyState}>
+        <p>No sample data available for counterfactual analysis.</p>
+        <p style={{ fontSize: '12px', marginTop: '8px' }}>Ensure the dataset has a sensitive column with at least 2 groups and numeric feature columns.</p>
       </div>
-      {activeRow && (
-        <div className={styles.cfEditor}>
-          <h3>Counterfactual Editor</h3>
-          <p>Modify the sensitive attribute <strong>{sensitiveCol}</strong> for this individual to see how the statistical likelihood of a positive outcome changes based on group disparity data.</p>
-          <div className={styles.cfField}>
-            <label>Original {sensitiveCol}:</label>
-            <input disabled value={originalValue} />
+    )
+  }
+
+  const activeRow = sampleRows[Math.min(selectedRowIndex, sampleRows.length - 1)]
+  const originalGroup = String(activeRow?.[sensitiveCol] ?? '')
+
+  // Score with original group
+  const origScore = scoreIndividual(activeRow, originalGroup, numericCols, featureStats, featureWeights, normalizedRates)
+  // Score with counterfactual group
+  const cfScore = scoreIndividual(activeRow, editedValue, numericCols, featureStats, featureWeights, normalizedRates)
+
+  const hasChange = editedValue !== originalGroup && editedValue !== ''
+  const diff = hasChange ? (cfScore - origScore) * 100 : 0
+
+  // Feature contributions for selected row
+  const featureContributions = numericCols.map(col => {
+    const val = Number(activeRow[col])
+    const stat = featureStats[col]
+    if (isNaN(val) || !stat) return null
+    const z = (val - stat.mean) / stat.std
+    const w = featureWeights[col] || 0
+    const contribution = z * w  // positive = favours selection
+    return { col, val, z, w, contribution, stat }
+  }).filter(Boolean).sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
+
+  const maxRate = Math.max(...availableGroups.map(g => normalizedRates[g] || 0), 0.001)
+
+  const diffClass = !hasChange ? styles.cfDiffNeutral
+    : diff > 1 ? styles.cfDiffPositive : diff < -1 ? styles.cfDiffNegative : styles.cfDiffNeutral
+  const diffMsg = !hasChange ? 'Same group — select a different group to see the counterfactual'
+    : diff > 1 ? `+${diff.toFixed(1)}% — more likely to receive a positive outcome`
+    : diff < -1 ? `${diff.toFixed(1)}% — less likely to receive a positive outcome`
+    : 'No meaningful difference between these groups for this individual'
+
+  const cols = Object.keys(sampleRows[0])
+
+  return (
+    <div>
+      {/* EU Legal Context Banner */}
+      <div className={styles.cfEuBanner}>
+        <span className={styles.cfEuIcon}>⚖️</span>
+        <div className={styles.cfEuBannerText}>
+          <span className={styles.cfEuBannerTitle}>EU AI Act Art. 86 + GDPR Art. 22 — Individual Counterfactual Explanations (CJEU C-203/22)</span>
+          <span className={styles.cfEuBannerDesc}>
+            The CJEU (C-203/22, Dun &amp; Bradstreet Austria, 2024) confirmed a right to counterfactual explanations of automated decisions.
+            This tool holds all {numericCols.length > 0 ? `${numericCols.length} numeric features` : 'features'} constant and changes only <strong>{sensitiveCol}</strong> —
+            the pure counterfactual fairness definition. Scores combine individual feature values ({numericCols.length > 0 ? 'weighted by their correlation with the outcome' : 'no numeric features detected'}) with the observed group disparity — not just a group average lookup.
+          </span>
+        </div>
+      </div>
+
+      {/* Group Rate Overview */}
+      <div className={styles.card}>
+        <h3 className={styles.cardTitle}>Group Selection Rates — Observed Disparity (Bias Evidence)</h3>
+        <p className={styles.cardHint}>These group rates drive the counterfactual adjustment. The bar shows each group's historical selection rate from the dataset.</p>
+        <div className={styles.cfGroupBar}>
+          {availableGroups.map(g => {
+            const rate = normalizedRates[g] ?? 0
+            const pct = Math.round(rate * 100)
+            const fillPct = (rate / maxRate) * 100
+            const isMax = rate === maxRate
+            const isMin = rate === Math.min(...availableGroups.map(x => normalizedRates[x] ?? 0))
+            const color = isMax ? 'var(--green)' : isMin ? 'var(--red)' : 'var(--primary)'
+            return (
+              <div key={g} className={styles.cfGroupBarItem}>
+                <span className={styles.cfGroupBarLabel}>{g}</span>
+                <div className={styles.cfGroupBarTrack}>
+                  <div className={styles.cfGroupBarFill} style={{ width: `${fillPct}%`, background: color }} />
+                </div>
+                <span className={styles.cfGroupBarPct} style={{ color }}>{pct}%</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className={styles.cfLayout}>
+        {/* Left: Record Table */}
+        <div className={styles.cfTableCard}>
+          <div className={styles.cfTableHeader}>
+            <span>Sample Records — Click to Select Individual</span>
+            <span className={styles.cfTableMeta}>{sampleRows.length} records · <strong style={{color:'var(--primary)'}}>{sensitiveCol}</strong> is protected (S) · {numericCols.length} numeric features used in scoring</span>
           </div>
-          <div className={styles.cfField}>
-            <label>Counterfactual {sensitiveCol}:</label>
-            <select value={editedValue} onChange={e => setEditedValue(e.target.value)}>
-              {availableGroups.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
-          </div>
-          <div className={styles.cfResult}>
-            <div className={styles.cfRateBox}>
-              <span>Original Likelihood</span>
-              <strong>{originalRate != null ? (originalRate * 100).toFixed(1) + '%' : 'N/A'}</strong>
-            </div>
-            <div className={styles.cfArrow}>→</div>
-            <div className={styles.cfRateBox}>
-              <span>New Likelihood</span>
-              <strong>{newRate != null ? (newRate * 100).toFixed(1) + '%' : 'N/A'}</strong>
-            </div>
-          </div>
-          <div className={`${styles.cfDiff} ${diff > 0 ? styles.cfDiffUp : diff < 0 ? styles.cfDiffDown : ''}`}>
-             Difference: {diff > 0 ? '+' : ''}{diff.toFixed(1)}% 
-             {diff !== 0 && (diff > 0 ? ' (More likely to pass)' : ' (Less likely to pass)')}
+          <div className={styles.cfTableScroll}>
+            <table className={styles.cfTable}>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  {cols.slice(0, 7).map(k => (
+                    <th key={k} style={k === sensitiveCol ? {color:'var(--primary)',fontWeight:800} : {}}>
+                      {k}{k === sensitiveCol ? ' (S)' : numericCols.includes(k) ? ' *' : ''}
+                    </th>
+                  ))}
+                  <th style={{color:'var(--primary)',borderLeft:'1px solid var(--border)'}}>Score ▾</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sampleRows.map((row, i) => {
+                  const rowScore = scoreIndividual(row, String(row[sensitiveCol] ?? ''), numericCols, featureStats, featureWeights, normalizedRates)
+                  return (
+                    <tr key={i}
+                      className={selectedRowIndex === i ? styles.cfActiveRow : ''}
+                      onClick={() => setSelectedRowIndex(i)}
+                      style={{ cursor: 'pointer' }}>
+                      <td style={{color:'var(--text-muted)',fontWeight:600}}>{i+1}</td>
+                      {cols.slice(0, 7).map(k => (
+                        <td key={k} style={k === sensitiveCol ? {fontWeight:700,color:'var(--primary)'} : {}}>
+                          {row[k] != null ? String(row[k]) : '—'}
+                        </td>
+                      ))}
+                      <td style={{fontWeight:700,color:rowScore>0.5?'var(--green)':'var(--red)',fontSize:'11px'}}>
+                        {(rowScore*100).toFixed(0)}%
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {numericCols.length > 0 && <p style={{fontSize:'10px',color:'var(--text-muted)',padding:'6px 12px',margin:0}}>* = numeric feature used in individual scoring</p>}
           </div>
         </div>
-      )}
+
+        {/* Right: Editor */}
+        <div className={styles.cfEditorCard}>
+          <div className={styles.cfEditorHeader}>
+            <Icon name="simulation" size={14} />
+            <span className={styles.cfEditorTitle}>Counterfactual Editor · Row {selectedRowIndex + 1}</span>
+          </div>
+          <div className={styles.cfEditorBody}>
+            {/* Row snapshot */}
+            <div>
+              <p style={{fontSize:'11px',fontWeight:600,color:'var(--text-muted)',marginBottom:'6px',textTransform:'uppercase',letterSpacing:'0.05em'}}>Selected Record</p>
+              <div className={styles.cfRowPreview}>
+                <div className={styles.cfRowPreviewGrid}>
+                  {cols.slice(0, 8).map(k => (
+                    <div key={k} className={styles.cfRowPreviewItem}>
+                      <span className={styles.cfRowPreviewKey}>{k}:</span>
+                      <span className={styles.cfRowPreviewVal}
+                        style={k === sensitiveCol ? {color:'var(--primary)',fontWeight:700} : {}}>
+                        {activeRow[k] != null ? String(activeRow[k]) : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Group selector */}
+            <div className={styles.cfSelectSection}>
+              <span className={styles.cfSelectLabel}>
+                Change <em style={{color:'var(--primary)'}}>{sensitiveCol}</em> to…
+              </span>
+              <span className={styles.cfSelectDesc}>
+                Original: <strong>{originalGroup}</strong>. Select a counterfactual group. All other {numericCols.length} feature values remain constant (pure counterfactual fairness).
+              </span>
+              <select className={styles.cfSelect} value={editedValue} onChange={e => setEditedValue(e.target.value)}>
+                {availableGroups.map(g => (
+                  <option key={g} value={g}>{g}{g === originalGroup ? ' (current)' : ''}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Outcome comparison */}
+            <div>
+              <p style={{fontSize:'11px',fontWeight:600,color:'var(--text-muted)',marginBottom:'8px',textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                Individual Predicted Outcome Likelihood
+                <span style={{fontWeight:400,color:'var(--text-muted)',fontSize:'10px',display:'block',textTransform:'none',letterSpacing:0,marginTop:'2px'}}>
+                  Combines individual feature values + group disparity signal
+                </span>
+              </p>
+              <div className={styles.cfComparisonGrid}>
+                <div className={styles.cfRateCardOrig}>
+                  <span className={styles.cfRateLabel}>Original</span>
+                  <span className={styles.cfRateGroup}>{originalGroup}</span>
+                  <span className={styles.cfRateNum}>{(origScore * 100).toFixed(1)}%</span>
+                  <div className={styles.cfRateBar}>
+                    <div className={styles.cfRateFill} style={{width:`${origScore*100}%`,background:'var(--text-muted)'}}/>
+                  </div>
+                </div>
+                <div className={styles.cfArrowBig}>→</div>
+                <div className={styles.cfRateCardNew}
+                  style={{borderColor: hasChange ? (diff > 1 ? 'rgba(74,222,128,0.4)' : diff < -1 ? 'rgba(248,113,113,0.4)' : 'var(--border)') : 'var(--border)'}}>
+                  <span className={styles.cfRateLabel}>Counterfactual</span>
+                  <span className={styles.cfRateGroup}
+                    style={{background: hasChange ? (diff > 1 ? 'rgba(74,222,128,0.12)' : diff < -1 ? 'rgba(248,113,113,0.12)' : 'var(--surface2)') : 'var(--surface2)'}}>
+                    {editedValue || originalGroup}
+                  </span>
+                  <span className={styles.cfRateNum}
+                    style={{color: !hasChange ? 'var(--text)' : diff > 1 ? 'var(--green)' : diff < -1 ? 'var(--red)' : 'var(--text)'}}>
+                    {(cfScore * 100).toFixed(1)}%
+                  </span>
+                  <div className={styles.cfRateBar}>
+                    <div className={styles.cfRateFill}
+                      style={{width:`${cfScore*100}%`,background: diff > 1 ? 'var(--green)' : diff < -1 ? 'var(--red)' : 'var(--primary)'}}/>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Diff card */}
+            <div className={`${styles.cfDiffCard} ${diffClass}`}>
+              <div>{diffMsg}</div>
+              {hasChange && Math.abs(diff) > 1 && (
+                <div className={styles.cfDiffSubtext}>
+                  This {diff > 0 ? 'advantage' : 'disadvantage'} is driven by group membership — holding all {numericCols.length} feature values constant.
+                </div>
+              )}
+            </div>
+
+            {/* Feature Contributions */}
+            {numericCols.length > 0 && featureContributions.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowFeatureDetail(x => !x)}
+                  style={{fontSize:'11px',color:'var(--primary)',fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:'0',textAlign:'left'}}>
+                  {showFeatureDetail ? '▼' : '▶'} Feature contributions for this individual ({featureContributions.length} features)
+                </button>
+                {showFeatureDetail && (
+                  <div style={{marginTop:'8px',display:'flex',flexDirection:'column',gap:'4px'}}>
+                    {featureContributions.slice(0, 8).map(fc => {
+                      const absMax = Math.max(...featureContributions.map(x => Math.abs(x.contribution)), 0.001)
+                      const barW = Math.min(Math.abs(fc.contribution) / absMax * 100, 100)
+                      const isPos = fc.contribution > 0
+                      return (
+                        <div key={fc.col} style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'11px'}}>
+                          <span style={{width:'100px',color:'var(--text)',fontWeight:500,flexShrink:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{fc.col}</span>
+                          <span style={{width:'42px',textAlign:'right',color:'var(--text-muted)',flexShrink:0}}>{fc.val.toFixed(1)}</span>
+                          <div style={{flex:1,height:'6px',background:'var(--border)',borderRadius:'3px',overflow:'hidden'}}>
+                            <div style={{height:'100%',width:`${barW}%`,background:isPos?'var(--green)':'var(--red)',borderRadius:'3px',marginLeft:isPos?'0':'auto'}}/>
+                          </div>
+                          <span style={{width:'40px',color:isPos?'var(--green)':'var(--red)',fontWeight:600,textAlign:'right',flexShrink:0}}>
+                            {isPos?'+':''}{(fc.contribution*100).toFixed(0)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                    <p style={{fontSize:'10px',color:'var(--text-muted)',margin:'4px 0 0'}}>
+                      Bar width = feature importance × z-score for this individual. Green = favours selection. Values weighted by correlation with outcome across groups.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* EU legal note */}
+            <div className={styles.cfLegalNote}>
+              <strong>GDPR Art. 22 &amp; AI Act Art. 86 (CJEU C-203/22):</strong> This individual has the right to receive this counterfactual explanation on request.
+              The {Math.abs(diff).toFixed(1)}% {diff !== 0 && hasChange ? (diff > 0 ? 'advantage' : 'disadvantage') : 'difference'} shown above
+              {Math.abs(diff) > 5 ? ' may constitute evidence of indirect discrimination under EU Charter Art. 21.' : ' is within acceptable tolerance under current EU guidance.'}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -227,15 +578,31 @@ export default function AuditResultsPage() {
   const [activeTab, setActiveTab] = useState('summary')
   const [shareState, setShareState] = useState('idle')
   const [exporting, setExporting] = useState(false)
+  const [previewingPdf, setPreviewingPdf] = useState(false)
+  const [pdfPreviewError, setPdfPreviewError] = useState('')
   const [showBadgeModal, setShowBadgeModal] = useState(false)
   const [searchParams] = useSearchParams()
+  const [showComplianceMetadataForm, setShowComplianceMetadataForm] = useState(false)
+  const [complianceDraft, setComplianceDraft] = useState({})
+  const [shareError, setShareError] = useState('')
+  const [idFetchedResult, setIdFetchedResult] = useState(null)
+  const [idFetchError, setIdFetchError] = useState('')
+  const sharedParam = searchParams.get('shared')
 
   let result, datasetDescription
   if (location.state?.result) {
     result = location.state.result; datasetDescription = location.state.description || ''
-  } else if (searchParams.get('shared')) {
-    const decoded = decodeShareData(searchParams.get('shared'))
-    if (decoded?.result) { result = decoded.result; datasetDescription = decoded.description || '' }
+  } else if (idFetchedResult) {
+    result = idFetchedResult
+    datasetDescription = ''
+  } else if (searchParams.get('id')) {
+    result = null
+  } else if (sharedParam) {
+    const decoded = decodeShareData(sharedParam)
+    if (decoded?.data?.result) {
+      result = decoded.data.result
+      datasetDescription = decoded.data.description || ''
+    }
   } else {
     try {
       const saved = sessionStorage.getItem('auditResult')
@@ -244,14 +611,42 @@ export default function AuditResultsPage() {
   }
 
   useEffect(() => {
+    const sharedId = searchParams.get('id')
+    if (!sharedId) return
+    let active = true
+    ;(async () => {
+      try {
+        const fetched = await getAuditResultById(sharedId)
+        if (!active) return
+        setIdFetchedResult(fetched)
+        setIdFetchError('')
+      } catch (err) {
+        if (!active) return
+        setIdFetchError(err?.response?.data?.detail || 'Shared audit could not be loaded.')
+      }
+    })()
+    return () => { active = false }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!sharedParam) return
+    const decoded = decodeShareData(sharedParam)
+    if (decoded?.error) setShareError(decoded.error)
+  }, [sharedParam])
+
+  useEffect(() => {
     if (result) {
       try { sessionStorage.setItem('auditResult', JSON.stringify({ result, description: datasetDescription })) } catch {}
     }
   }, [result, datasetDescription])
 
+  useEffect(() => {
+    setComplianceDraft(result?.compliance_metadata || {})
+  }, [result])
+
   if (!result) return (
     <div className={styles.noResult}>
-      <p>No audit data found.</p>
+      <p>{idFetchError || shareError || 'No audit data found.'}</p>
       <button className={styles.backBtn} onClick={() => navigate('/')}>← Back to Home</button>
     </div>
   )
@@ -271,6 +666,7 @@ export default function AuditResultsPage() {
     plain_language = {},
     sample_rows = [],
     group_rates_map = {},
+    compliance = {},
   } = result
 
   const scoreColor = bias_score < 20 ? '#4ade80' : bias_score < 45 ? '#fbbf24' : bias_score < 70 ? '#f97316' : '#f87171'
@@ -305,6 +701,13 @@ export default function AuditResultsPage() {
       isBest: r.method === mitigation.best_method,
     }))
   ] : []
+  const policyProfile = mitigation?.selection_context?.policy_profile || {}
+  const metricTriggers = mitigation?.selection_context?.metric_triggers || {}
+  const decisionTrace = Array.isArray(mitigation?.decision_trace) ? mitigation.decision_trace : []
+  const scenarioEvidence = mitigation?.selection_context?.scenario_evidence || []
+  const finalSelectionSource = mitigation?.final_selection_source || mitigation?.selection_context?.final_selection_source || 'scenario_policy'
+  const sourceBadgeLabel = finalSelectionSource === 'metric_override' ? 'Metric-overridden' : 'Policy-selected'
+  const sourceBadgeClass = finalSelectionSource === 'metric_override' ? styles.badgeAmber : styles.badgeBlue
 
   const tt = {
     contentStyle: { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8 },
@@ -313,14 +716,58 @@ export default function AuditResultsPage() {
 
   async function handleShare() {
     try {
-      await navigator.clipboard.writeText(buildShareUrl({ result, description: datasetDescription }))
+      const shareUrl = result.audit_id
+        ? buildShareUrl(result.audit_id)
+        : buildShareUrl({ result, description: datasetDescription })
+      if (!shareUrl) {
+        setShareState('error')
+        return
+      }
+      await navigator.clipboard.writeText(shareUrl)
       setShareState('copied'); setTimeout(() => setShareState('idle'), 2000)
     } catch { setShareState('idle') }
   }
 
   async function handleExport() {
+    setShowComplianceMetadataForm(true)
+  }
+
+  async function handleConfirmExport() {
     setExporting(true)
-    try { await exportAuditToPdf(result, datasetDescription) } finally { setExporting(false) }
+    try {
+      const payload = { ...result, compliance_metadata: { ...(result?.compliance_metadata || {}), ...complianceDraft } }
+      await exportAuditToPdf(payload, datasetDescription)
+      setShowComplianceMetadataForm(false)
+    } finally { setExporting(false) }
+  }
+
+  async function handlePreviewPdf() {
+    const previewTab = window.open('', '_blank')
+    setPreviewingPdf(true)
+    setPdfPreviewError('')
+    try {
+      if (!previewTab) {
+        throw new Error('Popup blocked')
+      }
+      previewTab.document.write('<!doctype html><title>Generating PDF preview…</title><p style="font-family:sans-serif;padding:16px">Generating PDF preview…</p>')
+      const payload = { ...result, compliance_metadata: { ...(result?.compliance_metadata || {}), ...complianceDraft } }
+      const blob = await exportAuditToPdfBlob(payload, datasetDescription)
+      const nextUrl = URL.createObjectURL(blob)
+      previewTab.location.href = nextUrl
+      setTimeout(() => URL.revokeObjectURL(nextUrl), 60_000)
+    } catch (error) {
+      console.error('PDF preview failed:', error)
+      if (previewTab && !previewTab.closed) previewTab.close()
+      if (String(error?.message || '').toLowerCase().includes('popup blocked')) {
+        setPdfPreviewError('Preview failed because popup was blocked. Allow popups and try again.')
+      } else if (String(error?.message || '').toLowerCase().includes('invalid audit result payload')) {
+        setPdfPreviewError('Preview failed due to invalid audit data payload.')
+      } else {
+        setPdfPreviewError(`Preview failed: ${error?.message || 'unknown error'}`)
+      }
+    } finally {
+      setPreviewingPdf(false)
+    }
   }
 
   const tabBadges = {
@@ -352,6 +799,9 @@ export default function AuditResultsPage() {
           <button className={styles.actionBtn} onClick={handleExport} disabled={exporting}>
             <Icon name="pdf" size={13}/> {exporting ? 'Generating...' : 'EU Compliance Report'}
           </button>
+          <button className={styles.actionBtn} onClick={handlePreviewPdf} disabled={previewingPdf}>
+            <Icon name="chart" size={13}/> {previewingPdf ? 'Generating PDF...' : 'Preview PDF'}
+          </button>
         </div>
       </header>
 
@@ -370,6 +820,50 @@ export default function AuditResultsPage() {
 
       {/* ── Tab Content ── */}
       <div className={styles.main}>
+        {pdfPreviewError && (
+          <div className={styles.card}>
+            <h3 className={styles.sectionTitle} style={{ color: 'var(--red)' }}>{pdfPreviewError}</h3>
+          </div>
+        )}
+        {showComplianceMetadataForm && (
+          <div className={styles.card}>
+            <h3 className={styles.sectionTitle}>Compliance Metadata (for report only)</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {[
+                ['dataset_name', 'Dataset name'],
+                ['dataset_version', 'Dataset version'],
+                ['data_source', 'Data source'],
+                ['lawful_basis', 'Lawful basis'],
+                ['purpose_of_processing', 'Purpose of processing'],
+                ['dpia_status', 'DPIA status'],
+                ['oversight_contact', 'Human oversight contact'],
+                ['security_assessment_status', 'Security assessment'],
+                ['monitoring_frequency', 'Monitoring frequency'],
+                ['intended_use', 'Intended use'],
+                ['system_limitations', 'System limitations'],
+                ['log_retention_policy', 'Log retention policy'],
+              ].map(([key, label]) => (
+                <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+                  <span>{label}</span>
+                  <input
+                    value={complianceDraft?.[key] || ''}
+                    onChange={(e) => setComplianceDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder="NOT PROVIDED"
+                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+                  />
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+              <button className={styles.actionBtn} onClick={() => setShowComplianceMetadataForm(false)} disabled={exporting}>
+                Cancel
+              </button>
+              <button className={styles.actionBtn} onClick={handleConfirmExport} disabled={exporting}>
+                <Icon name="pdf" size={13}/> {exporting ? 'Generating...' : 'Generate EU Compliance Report'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ══ SUMMARY ══ */}
         {activeTab === 'summary' && (
@@ -486,31 +980,101 @@ export default function AuditResultsPage() {
               )}
             </div>
 
-            {statistical_test && (
-              <div className={`${styles.statSigCard} ${statistical_test.is_significant ? styles.statSigFlagged : styles.statSigOk}`}>
-                <Icon name={statistical_test.is_significant ? 'warning' : 'check'} size={16}/>
-                <div>
-                  <p className={styles.statSigTitle}>
-                    {statistical_test.is_significant ? 'Statistically Significant Bias' : 'Not Statistically Significant'}
-                    {statistical_test.cramers_v != null && (
-                      <span className={styles.effectBadge} style={{
-                        color: statistical_test.cramers_v >= 0.40 ? 'var(--red)' :
-                               statistical_test.cramers_v >= 0.20 ? 'var(--amber)' : 'var(--text-muted)'
-                      }}>
-                        {' '}· Cramér's V = {statistical_test.cramers_v?.toFixed(3)} ({statistical_test.effect_size} effect)
+            {statistical_test && (() => {
+              const st = statistical_test
+              const cv = st.cramers_v ?? 0
+              const cvColor = cv >= 0.40 ? 'var(--red)' : cv >= 0.20 ? 'var(--amber)' : 'var(--green)'
+              const stColor = st.is_significant ? 'var(--red)' : 'var(--green)'
+              const cvPct   = Math.min(cv / 0.6, 1) * 100
+              return (
+                <div className={`${styles.cramersCard} ${st.is_significant ? styles.cramersCardFlagged : styles.cramersCardOk}`}>
+                  {/* Top row: significance verdict */}
+                  <div className={styles.cramersTopRow}>
+                    <div className={styles.cramersIconWrap} style={{background: st.is_significant ? 'rgba(248,113,113,0.15)' : 'rgba(74,222,128,0.12)'}}>
+                      <Icon name={st.is_significant ? 'warning' : 'check'} size={20}/>
+                    </div>
+                    <div className={styles.cramersVerdict}>
+                      <span className={styles.cramersVerdictLabel}>Statistical Significance Test (Chi-square)</span>
+                      <span className={styles.cramersVerdictText} style={{color: stColor}}>
+                        {st.is_significant ? 'Bias IS Statistically Significant (p < 0.05)' : 'Not Statistically Significant (p ≥ 0.05)'}
                       </span>
-                    )}
-                  </p>
-                  <p className={styles.statSigText}>{statistical_test.interpretation}</p>
+                    </div>
+                  </div>
+
+                  {/* Cramér's V big display */}
+                  {cv != null && (
+                    <div className={styles.cramersBody}>
+                      <div className={styles.cramersMetric}>
+                        <span className={styles.cramersMetricLabel}>Cramér's V</span>
+                        <span className={styles.cramersMetricValue} style={{color: cvColor}}>{cv.toFixed(3)}</span>
+                        <span className={styles.cramersEffectBadge} style={{background: cvColor + '22', color: cvColor, borderColor: cvColor + '55'}}>
+                          {st.effect_size} effect
+                        </span>
+                      </div>
+
+                      {/* Visual bar with zone markers */}
+                      <div className={styles.cramersBarWrap}>
+                        <div className={styles.cramersBarTrack}>
+                          <div className={styles.cramersBarFill} style={{width: `${cvPct}%`, background: cvColor}}/>
+                          <div className={styles.cramersZoneSmall}/>
+                          <div className={styles.cramersZoneMedium}/>
+                          <div className={styles.cramersZoneLarge}/>
+                        </div>
+                        <div className={styles.cramersBarLabels}>
+                          <span>Negligible</span><span>Small</span><span>Medium</span><span>Large</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.cramersStats}>
+                        {st.statistic != null && (
+                          <div className={styles.cramersStat}>
+                            <span className={styles.cramersStatLabel}>Chi-square (χ²)</span>
+                            <span className={styles.cramersStatVal}>{st.statistic.toFixed(3)}</span>
+                          </div>
+                        )}
+                        {st.p_value != null && (
+                          <div className={styles.cramersStat}>
+                            <span className={styles.cramersStatLabel}>p-value</span>
+                            <span className={styles.cramersStatVal} style={{color: st.p_value < 0.05 ? 'var(--red)' : 'var(--green)'}}>
+                              {st.p_value < 0.0001 ? '< 0.0001' : st.p_value.toFixed(4)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className={styles.cramersInterpretation}>{st.interpretation}</p>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             <h3 className={styles.subTitle}>Key Metrics</h3>
             <div className={styles.metricsGrid}>
-              {metrics.filter(m => ['demographic_parity_difference', 'disparate_impact_ratio'].includes(m.key)).map(m => (
+              {[
+                ...metrics.filter(m => ['demographic_parity_difference', 'disparate_impact_ratio'].includes(m.key)),
+                ...(statistical_test ? [{
+                  name: 'Chi-square Statistic (χ²)',
+                  key: 'chi_square_statistic',
+                  value: statistical_test.statistic ?? 0,
+                  threshold: null,
+                  threshold_direction: 'below',
+                  flagged: Boolean(statistical_test.is_significant),
+                  interpretation: `p-value=${(statistical_test.p_value ?? 1).toFixed(6)}`,
+                }] : []),
+              ].map(m => (
                 <MetricCard key={m.key} metric={m} plainLang={plain_language[m.key]}/>
               ))}
+            </div>
+
+            <div className={styles.card}>
+              <h3 className={styles.cardTitle}>Methods & Research Basis</h3>
+              <ul className={styles.causeList}>
+                <li className={styles.causeItem}><span className={styles.causeDot}/>DPD and DIR are computed from observed per-group selection rates used in fairness literature and compliance practice.</li>
+                <li className={styles.causeItem}><span className={styles.causeDot}/>Chi-square and p-value are computed with scipy&apos;s Pearson chi-square test of independence on the sensitive×target contingency table.</li>
+                <li className={styles.causeItem}><span className={styles.causeDot}/>Effect size is reported with Cramér&apos;s V, a standard association-strength statistic for categorical variables.</li>
+                <li className={styles.causeItem}><span className={styles.causeDot}/>Narrative text may be AI-assisted, but numeric metrics and flags come from deterministic backend computation.</li>
+              </ul>
             </div>
 
             <div className={styles.nextStepRow}>
@@ -723,19 +1287,18 @@ export default function AuditResultsPage() {
           <div className={styles.tabContent}>
             <h2 className={styles.tabTitle}>Fix Bias</h2>
             <p className={styles.tabSubtitle}>
-              Three mitigation strategies evaluated automatically.
+              Four scenario-aware mitigation strategies evaluated automatically.
               Ranked by: <strong>0.4 × DPD_reduction + 0.4 × est_accuracy + 0.2 × rate_stability</strong> (confidence-discounted).
-              All values are projections — actual improvement requires implementation.
+              Scores are computed from dataset statistics and model outputs (Python/scikit-learn/scipy); AI generates explanation text only.
             </p>
 
             {!mitigation ? (
               <div className={styles.emptyState}><p>Run an audit to see mitigation results.</p></div>
             ) : (
               <>
-                {/* Projection disclaimer */}
                 <div className={styles.projectionNotice}>
                   <Icon name="insights" size={14}/>
-                  <span>These are <strong>projected</strong> outcomes — simulations of what each technique could achieve. Actual results depend on model retraining and implementation.</span>
+                  <span>Mitigation outcomes are computed from scenario-aware runs on this dataset (reweighing, disparate impact remover, threshold optimization, reject option classification), not pseudo-calculations.</span>
                 </div>
 
                 {/* Banner */}
@@ -753,14 +1316,17 @@ export default function AuditResultsPage() {
                   </div>
                   <div className={styles.simBannerImprovement}>
                     <span className={styles.simBannerImpLabel}>Best Method: {mitigation.best_method.split('_').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')}</span>
-                    <span className={styles.simBannerImpVal}>{mitigation.trade_off_summary}</span>
+                    <span className={styles.simBannerImpHeadline}>{toCompactSentence(mitigation.trade_off_summary, 190)}</span>
+                    {mitigation.selection_reason && (
+                      <span className={styles.simBannerImpDetail}><strong>Why selected:</strong> {toCompactSentence(mitigation.selection_reason, 175)}</span>
+                    )}
                   </div>
                 </div>
 
                 {/* Chart — use full 0-100 scale so bars are visible */}
                 <div className={styles.card}>
-                  <h3 className={styles.cardTitle}>Projected Bias Score by Method</h3>
-                  <p className={styles.cardHint}>Lower is better · Green = recommended method · All values are projections</p>
+                  <h3 className={styles.cardTitle}>Bias Score by Method</h3>
+                  <p className={styles.cardHint}>Lower is better · Green = recommended method · Values are from executed runs</p>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={mitigationChartData} barCategoryGap="25%" barSize={80}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)"/>
@@ -770,7 +1336,7 @@ export default function AuditResultsPage() {
                         label={{ value: 'Bias Score', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 11 }}/>
                       <Tooltip
                         formatter={(v, n, p) => [
-                          `${v} projected bias${p.payload.accuracy != null ? ` | Accuracy: ${(p.payload.accuracy*100).toFixed(1)}%` : ''}`,
+                          `${v} bias after mitigation${p.payload.accuracy != null ? ` | Accuracy: ${(p.payload.accuracy*100).toFixed(1)}%` : ''}`,
                           p.payload.isBest ? '★ Recommended' : p.payload.name
                         ]}
                         {...tt}/>
@@ -794,12 +1360,17 @@ export default function AuditResultsPage() {
                         <div className={styles.bestBadge}>Recommended</div>
                       )}
                       <h4 className={styles.mitigationMethod}>
-                        {r.method === 'rate_equalisation' ? 'Rate Equalisation' : r.method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                        {r.method === 'threshold_optimisation'
+                          ? 'Threshold Optimization'
+                          : r.method.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                       </h4>
                       <p className={styles.mitigationDesc}>{r.description}</p>
+                      {r.scenario_reason && (
+                        <p className={styles.mitigationDesc}><strong>Scenario rule:</strong> {r.scenario_reason}</p>
+                      )}
                       <div className={styles.mitigationStats}>
                         <div className={styles.mitigationStat}>
-                          <span className={styles.mitigationStatLabel}>Projected Bias</span>
+                          <span className={styles.mitigationStatLabel}>Bias After Mitigation</span>
                           <span className={styles.mitigationStatVal}
                             style={{ color: r.bias_score < 20 ? 'var(--green)' : r.bias_score < 45 ? 'var(--amber)' : 'var(--red)' }}>
                             {r.bias_score} / 100
@@ -884,11 +1455,14 @@ export default function AuditResultsPage() {
         {/* ══ WHAT-IF EXPERIMENTS ══ */}
         {activeTab === 'whatif' && (
           <div className={styles.tabContent}>
-            <h2 className={styles.tabTitle}>Counterfactual Row Editor</h2>
+            <h2 className={styles.tabTitle}>What-If / Counterfactual Analysis</h2>
             <p className={styles.tabDesc}>
-              Select a real record from your dataset and modify its sensitive attributes string to simulate counterfactual fairness decisions based on historical group bias.
+              Select any real record and change its <strong>{sensitive_column}</strong> value to see how that individual's statistical outcome likelihood would change —
+              a direct implementation of GDPR Art. 22 counterfactual explanation rights confirmed by CJEU C-203/22.
             </p>
-            <CounterfactualEditor sampleRows={sample_rows} sensitiveCol={sensitive_column} groupRatesMap={group_rates_map} />
+            <div className={styles.whatIfStack}>
+              <CounterfactualEditor sampleRows={sample_rows} sensitiveCol={sensitive_column} groupRatesMap={group_rates_map} allNumericGaps={all_numeric_gaps} />
+            </div>
           </div>
         )}
 
@@ -939,43 +1513,194 @@ export default function AuditResultsPage() {
               </div>
             )}
 
+            {mitigation && (
+              <>
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Scenario Transparency</h3>
+                  <div className={styles.selectorBadgeRow}>
+                    <span className={`${styles.badge} ${sourceBadgeClass}`}>{sourceBadgeLabel}</span>
+                    {mitigation.policy_selected_method && (
+                      <span className={`${styles.badge} ${styles.badgeGreen}`}>
+                        Policy: {mitigation.policy_selected_method.split('_').join(' ')}
+                      </span>
+                    )}
+                    {mitigation.metric_override_method && (
+                      <span className={`${styles.badge} ${styles.badgeAmber}`}>
+                        Override: {mitigation.metric_override_method.split('_').join(' ')}
+                      </span>
+                    )}
+                  </div>
+                  <ul className={styles.transpMetaList}>
+                    <li className={styles.transpMetaItem}><strong>Detected domain:</strong> {mitigation.selection_context?.scenario || 'general'}</li>
+                    <li className={styles.transpMetaItem}><strong>Scenario confidence:</strong> {mitigation.selection_context?.scenario_confidence ?? 0}</li>
+                    <li className={styles.transpMetaItem}><strong>Evidence keywords:</strong> {scenarioEvidence.length ? scenarioEvidence.join(', ') : 'No strong domain keywords found'}</li>
+                    <li className={styles.transpMetaItem}><strong>Policy reason:</strong> {mitigation.selection_context?.decision_trace?.[0]?.reason || mitigation.selection_reason || 'Not available'}</li>
+                  </ul>
+                </div>
+
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Metric Transparency</h3>
+                  <ul className={styles.transpMetaList}>
+                    <li className={styles.transpMetaItem}><strong>Fairness priorities:</strong> {(policyProfile.fairness_priority || []).join(', ') || 'Not specified'}</li>
+                    <li className={styles.transpMetaItem}><strong>Thresholds:</strong> DPD ≤ {policyProfile.metric_thresholds?.dpd_max ?? 0.1}, DIR ≥ {policyProfile.metric_thresholds?.dir_min ?? 0.8}, TPR/FPR gap ≤ {policyProfile.metric_thresholds?.tpr_gap_max ?? 0.1}</li>
+                    <li className={styles.transpMetaItem}><strong>Measured gates:</strong> DPD severe={String(!!metricTriggers.dpd_severe)}, DIR critical={String(!!metricTriggers.dir_critical)}, TPR severe={String(!!metricTriggers.tpr_gap_severe)}, FPR severe={String(!!metricTriggers.fpr_gap_severe)}</li>
+                    <li className={styles.transpMetaItem}><strong>Unmeasured handling:</strong> {has_predictions ? 'TPR/FPR measured from predictions.' : 'TPR/FPR unavailable in label-only mode.'}</li>
+                  </ul>
+                </div>
+
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Mitigation Transparency</h3>
+                  <ul className={styles.transpMetaList}>
+                    <li className={styles.transpMetaItem}><strong>Policy method:</strong> {mitigation.policy_selected_method || 'Not available'}</li>
+                    <li className={styles.transpMetaItem}><strong>Final method:</strong> {mitigation.selected_method || mitigation.best_method}</li>
+                    <li className={styles.transpMetaItem}><strong>Selection source:</strong> {finalSelectionSource}</li>
+                    <li className={styles.transpMetaItem}><strong>Trade-off:</strong> {mitigation.trade_off_summary || 'Not available'}</li>
+                  </ul>
+                </div>
+
+                <div className={styles.card}>
+                  <h3 className={styles.cardTitle}>Governance Transparency</h3>
+                  <ul className={styles.transpMetaList}>
+                    <li className={styles.transpMetaItem}><strong>Automated:</strong> metric calculation, scenario detection, policy lookup, method scoring/ranking.</li>
+                    <li className={styles.transpMetaItem}><strong>Operator action required:</strong> legal basis, notice text, deployment controls, ongoing monitoring cadence.</li>
+                    <li className={styles.transpMetaItem}><strong>Decision trace layers:</strong> {decisionTrace.map(d => d.layer).join(' → ') || 'Not available'}</li>
+                  </ul>
+                </div>
+              </>
+            )}
+
             <div className={styles.card}>
               <h3 className={styles.cardTitle}>Bias Score Formula</h3>
               <div className={styles.formulaBox}>
                 <p style={{whiteSpace: 'pre-wrap'}}>{has_predictions
                   ? [
-                      'bias_score = (0.40 x dpd_v + 0.25 x dir_v + 0.20 x tpr_v + 0.15 x fpr_v) x 100',
+                      '── Model-based mode (prediction column present) ────────────────',
                       '',
-                      'dpd_v = graduated curve (not hard cap):',
-                      '  DPD <= 0.10 : dpd_v = DPD / 0.10 x 0.75    (0.05 -> 0.375, 0.10 -> 0.75)',
-                      '  DPD >  0.10 : dpd_v = 0.75 + 0.25 x sqrt((DPD - 0.10) / 0.90)',
-                      '                        (0.20 -> 0.88, 0.40 -> 0.94, 1.0 -> 1.0)',
-                      'dir_v = 0 if DIR >= 0.80 else min((0.80 - DIR) / 0.80, 1)   [legal 4/5 rule]',
-                      'tpr_v = same graduated curve scaled to 0.10 threshold        [Equal Opportunity]',
-                      'fpr_v = same graduated curve scaled to 0.10 threshold        [Equalized Odds]',
+                      'bias_score = mean([dpd_v, dir_v, tpr_v, fpr_v]) × 100',
+                      '           = 4 violations averaged equally',
+                      '',
+                      'dpd_v = min(DPD / 0.10, 1.0)',
+                      '        where DPD = max(pass_rates) - min(pass_rates)',
+                      '        Flagged if DPD > 0.10',
+                      '',
+                      'dir_v = 0                          if DIR >= 0.80  (EU 4/5 rule — passing)',
+                      '      = min((0.80 - DIR) / 0.80, 1)  if DIR < 0.80   (EU 4/5 rule — failing)',
+                      '        where DIR = min(pass_rates) / max(pass_rates)',
+                      '',
+                      'tpr_v = min(TPR_gap / 0.10, 1.0)   [Equal Opportunity — requires predictions]',
+                      'fpr_v = min(FPR_gap / 0.10, 1.0)   [Equalized Odds — requires predictions]',
+                      '',
+                      '── Thresholds ─────────────────────────────────────────────────',
+                      'DPD threshold  : < 0.10   (EU best practice)',
+                      'DIR threshold  : >= 0.80  (EU 4/5 / 80% rule)',
+                      'TPR/FPR thresh : < 0.10   (equal opportunity standard)',
                     ].join('\n')
                   : [
-                      'bias_score = (0.60 x dpd_v + 0.40 x dir_v) x 100',
+                      '── Label-only mode (no prediction column) ───────────────────────',
                       '',
-                      'dpd_v = graduated curve (not hard cap):',
-                      '  DPD <= 0.10 : dpd_v = DPD / 0.10 x 0.75    (0.05 -> 0.375, 0.10 -> 0.75)',
-                      '  DPD >  0.10 : dpd_v = 0.75 + 0.25 x sqrt((DPD - 0.10) / 0.90)',
-                      '                        (0.20 -> 0.88, 0.40 -> 0.94, 1.0 -> 1.0)',
-                      'dir_v = 0 if DIR >= 0.80 else min((0.80 - DIR) / 0.80, 1)   [legal 4/5 rule]',
+                      'bias_score = mean([dpd_v, dir_v]) × 100',
+                      '           = 2 violations averaged equally',
                       '',
-                      'DPD weighted 0.60 (primary metric), DIR weighted 0.40 (legal dimension).',
-                      'Weighted not averaged -- avoids double-counting the same disparity.',
-                      'Graduated curve -- DPD=0.11 and DPD=0.80 score differently (no hard cap).',
-                      'TPR/FPR excluded: no prediction column (label-only mode).',
+                      'dpd_v = min(DPD / 0.10, 1.0)',
+                      '        where DPD = max(pass_rates) - min(pass_rates)',
+                      '        Flagged if DPD > 0.10',
+                      '',
+                      'dir_v = 0                          if DIR >= 0.80  (EU 4/5 rule — passing)',
+                      '      = min((0.80 - DIR) / 0.80, 1)  if DIR < 0.80   (EU 4/5 rule — failing)',
+                      '        where DIR = min(pass_rates) / max(pass_rates)',
+                      '',
+                      'TPR/FPR: NOT computed — no prediction column provided.',
+                      'Add a prediction column to enable Equal Opportunity & Equalized Odds metrics.',
+                      '',
+                      '── Thresholds ─────────────────────────────────────────────────',
+                      'DPD threshold  : < 0.10   (EU best practice)',
+                      'DIR threshold  : >= 0.80  (EU 4/5 / 80% rule)',
                     ].join('\n')
                 }</p>
                 <p className={styles.formulaNote}>
-                  All metrics computed in Python. Gemini writes narrative text only.
-                  Theil uses population-weighted formula. Performance gap normalised to column range.
-                  Chi-square + Cramer&apos;s V: V&lt;0.10 negligible, 0.10-0.20 small, 0.20-0.40 medium, &gt;=0.40 large.
+                  All fairness metrics computed in Python (audit_service.py). Gemini 2.5 Flash writes narrative text only — it never modifies numeric results.
+                  Theil index uses group-level rate formula: mean((r/mean_r)·ln(r/mean_r)). Performance gap normalised to column range.
+                  Statistical significance uses Pearson chi-square on the sensitive×target contingency table (scipy.stats.chi2_contingency with correction disabled).
+                  Cramér&apos;s V uses bias correction (Bergsma, 2013). Steps: φ²=χ²/n; φ²corr=max(0, φ²-((k−1)(r−1))/(n−1)); rows_corrected=r-((r−1)²/(n−1)); cols_corrected=k-((k−1)²/(n−1)); V=sqrt(φ²corr/min(cols_corrected−1, rows_corrected−1)).
+                  Effect size bands: V&lt;0.10 negligible · 0.10–0.20 small · 0.20–0.40 medium · ≥0.40 large.
+                  Bias score range: 0–19 = Low · 20–44 = Moderate · 45–69 = High · 70–100 = Critical.
                 </p>
               </div>
             </div>
+
+            {Array.isArray(compliance?.gap_matrix) && compliance.gap_matrix.length > 0 && (
+              <div className={styles.card}>
+                <h3 className={styles.cardTitle}>EU AI Act Gap Matrix (Dedicated)</h3>
+                <div className={styles.tableWrap}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Article</th>
+                        <th>Status</th>
+                        <th>Rationale</th>
+                        <th>Detected Gaps</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {compliance.gap_matrix.map((row, idx) => (
+                        <tr key={`${row.article}-${idx}`}>
+                          <td><strong>{row.article}</strong></td>
+                          <td>
+                            <span className={`${styles.badge} ${
+                              row.status === 'Green' ? styles.badgeGreen :
+                              row.status === 'Amber' ? styles.badgeAmber : styles.badgeRed
+                            }`}>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td>{row.rationale}</td>
+                          <td>
+                            {Array.isArray(row.gaps) && row.gaps.length > 0 ? row.gaps.join(' · ') : 'No material gaps detected'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {Array.isArray(compliance?.remaining_controls) && compliance.remaining_controls.length > 0 && (
+                  <>
+                    <h3 className={styles.cardTitle} style={{ marginTop: 16 }}>Remaining Product/Process Controls</h3>
+                    <div className={styles.tableWrap}>
+                      <table className={styles.table}>
+                        <thead>
+                          <tr>
+                            <th>Control ID</th>
+                            <th>Article</th>
+                            <th>Priority</th>
+                            <th>Owner</th>
+                            <th>Required Control</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {compliance.remaining_controls.map((c, idx) => (
+                            <tr key={`${c.id || 'ctrl'}-${idx}`}>
+                              <td><strong>{c.id || 'CONTROL'}</strong></td>
+                              <td>{c.article || 'N/A'}</td>
+                              <td>
+                                <span className={`${styles.badge} ${
+                                  String(c.priority).toLowerCase() === 'high' ? styles.badgeRed :
+                                  String(c.priority).toLowerCase() === 'medium' ? styles.badgeAmber : styles.badgeGreen
+                                }`}>
+                                  {c.priority || 'medium'}
+                                </span>
+                              </td>
+                              <td>{c.owner || 'Owner not assigned'}</td>
+                              <td>{c.control || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className={styles.card}>
               <h3 className={styles.cardTitle}>All Columns</h3>

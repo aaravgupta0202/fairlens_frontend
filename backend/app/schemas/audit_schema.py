@@ -1,5 +1,14 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, List, Any, Optional
+
+# ── Validation roles (fixed) ───────────────────────────────────────────────────
+VALIDATION_ROLES = [
+    "System Owner / Deployer",
+    "Compliance Officer",
+    "Data Protection Officer (DPO)",
+    "Technical Lead / Model Developer",
+]
+TECHNICAL_LEAD_ROLE = "Technical Lead / Model Developer"
 
 
 # ── Request ──────────────────────────────────────────────────────────────────
@@ -91,11 +100,30 @@ class StatisticalTest(BaseModel):
 
 class MitigationMethodResult(BaseModel):
     method: str
+    method_type: Optional[str] = None
+    scenario_reason: Optional[str] = None
+    selected_by_scenario: bool = False
+    selected_by_policy: bool = False
+    selected_by_metric_override: bool = False
+    selection_badge: Optional[str] = None
     bias_score: float
     accuracy: Optional[float] = None
+    precision: Optional[float] = None
+    recall: Optional[float] = None
     tpr_gap: Optional[float] = None
     fpr_gap: Optional[float] = None
     dpd: float
+    dir: Optional[float] = None
+    before_dpd: Optional[float] = None
+    after_dpd: Optional[float] = None
+    before_dir: Optional[float] = None
+    after_dir: Optional[float] = None
+    before_accuracy: Optional[float] = None
+    after_accuracy: Optional[float] = None
+    before_precision: Optional[float] = None
+    after_precision: Optional[float] = None
+    before_recall: Optional[float] = None
+    after_recall: Optional[float] = None
     improvement: float
     final_score: float
     description: str = ""
@@ -106,6 +134,13 @@ class MitigationSummary(BaseModel):
     results: List[MitigationMethodResult]
     best_method: str
     best_reason: str
+    selected_method: Optional[str] = None
+    selection_reason: Optional[str] = None
+    selection_context: Dict[str, Any] = Field(default_factory=dict)
+    policy_selected_method: Optional[str] = None
+    metric_override_method: Optional[str] = None
+    final_selection_source: Optional[str] = None
+    decision_trace: List[Dict[str, Any]] = Field(default_factory=list)
     bias_before: float
     bias_after: float
     accuracy_after: Optional[float] = None
@@ -148,7 +183,73 @@ class AuditResponse(BaseModel):
     primary_numeric_column: Optional[str] = None
     sample_rows: List[Dict[str, Any]] = []
     group_rates_map: Dict[str, float] = {}
+    compliance: Optional[Dict[str, Any]] = None
+    integrity_hash: Optional[str] = None
+    audit_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+# ── Compliance metadata persistence ────────────────────────────────────────────
+
+
+class ComplianceMetadata(BaseModel):
+    lawful_basis: Optional[str] = None
+    purpose_of_processing: Optional[str] = None
+    data_categories: Optional[str] = None
+    retention_period: Optional[str] = None
+    dpia_status: Optional[str] = None
+    dsar_process: Optional[str] = None
+    dpia_link: Optional[str] = None
+    dpo_contact: Optional[str] = None
+    oversight_contact: Optional[str] = None
+    nca_jurisdiction: Optional[str] = None
+    monitoring_cadence: Optional[str] = None
+    monitoring_frequency: Optional[str] = None
+    escalation_plan: Optional[str] = None
+    security_assessment_status: Optional[str] = None
+    annex_confirmation: Optional[str] = None
+    dataset_name: Optional[str] = None
+    dataset_version: Optional[str] = None
+    data_source: Optional[str] = None
+    collection_method: Optional[str] = None
+    labeling_method: Optional[str] = None
+    preprocessing_steps: Optional[str] = None
+    known_biases: Optional[str] = None
+    dataset_origin: Optional[str] = None
+    representativeness_explanation: Optional[str] = None
+    bias_sources: Optional[str] = None
+    intended_use: Optional[str] = None
+    intended_users: Optional[str] = None
+    system_limitations: Optional[str] = None
+    known_failure_modes: Optional[str] = None
+    log_retention_policy: Optional[str] = None
+    log_storage_location: Optional[str] = None
+    alert_channel: Optional[str] = None
+    countersignatures: List[Dict[str, Any]] = Field(default_factory=list)
+    robustness_validation: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ComplianceRecord(BaseModel):
+    record_id: str
+    record_version: int
+    deployment_locked: bool = False
+    created_at: str
+    updated_at: str
+    integrity_hash: str
+    export_integrity_hash: Optional[str] = None
+    audit_result: Dict[str, Any]
+    compliance_metadata: ComplianceMetadata
+
+
+class ComplianceRecordRequest(BaseModel):
+    record_id: Optional[str] = None
+    deployment_locked: Optional[bool] = None
+    audit_result: Dict[str, Any]
+    compliance_metadata: Optional[ComplianceMetadata] = None
+
+
+class ComplianceRecordResponse(ComplianceRecord):
+    hash_valid: bool
